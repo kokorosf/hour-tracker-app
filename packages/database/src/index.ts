@@ -8,6 +8,7 @@ export { ClientRepository } from './repositories/client.repository';
 export { ProjectRepository } from './repositories/project.repository';
 export type { ProjectWithClientName } from './repositories/project.repository';
 export { TaskRepository } from './repositories/task.repository';
+export type { TaskWithProjectName } from './repositories/task.repository';
 export { TimeEntryRepository } from './repositories/time-entry.repository';
 export type { ProjectHoursSummary } from './repositories/time-entry.repository';
 export { UserRepository } from './repositories/user.repository';
