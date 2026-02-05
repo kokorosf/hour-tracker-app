@@ -5,6 +5,8 @@
     "plugins": [{ "name": "next" }],
     "baseUrl": ".",
     "paths": {
+      "@/*": ["./src/*"],
+      "@hour-tracker/database": ["../../packages/database/src"],
       "@hour-tracker/types": ["../../packages/types/src"],
       "@hour-tracker/ui": ["../../packages/ui/src"]
     }

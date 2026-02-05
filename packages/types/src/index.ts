@@ -19,3 +19,5 @@ export type {
   CreateTimeEntryDto,
   UpdateTimeEntryDto,
 } from './entities';
+
+export type { ExtendedUser, ExtendedSession } from './auth';
