@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.9",
     "@hour-tracker/database": "*",
     "@hour-tracker/types": "*",
     "@hour-tracker/ui": "*",
