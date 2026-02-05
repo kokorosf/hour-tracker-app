@@ -2,7 +2,7 @@
 
 import { type InputHTMLAttributes, useId } from 'react';
 
-export type InputType = 'text' | 'email' | 'password' | 'number' | 'date' | 'datetime-local';
+export type InputType = 'text' | 'email' | 'password' | 'number' | 'date' | 'time' | 'datetime-local';
 
 export interface InputProps
   extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'type' | 'value'> {

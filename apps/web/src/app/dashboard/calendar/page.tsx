@@ -17,7 +17,7 @@ import useSWR from 'swr';
 import { api } from '@/lib/api/client';
 import { getProjectColor } from '@/lib/utils/colors';
 import { useToast } from '@/../components/ui/toast';
-import TimeEntryModal from '@/../components/dashboard/time-entry-modal';
+import TimeEntryModal, { type TimeEntryForModal } from '@/../components/calendar/time-entry-modal';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -58,9 +58,8 @@ export default function CalendarPage() {
 
   // Modal state.
   const [modalOpen, setModalOpen] = useState(false);
-  const [editEntry, setEditEntry] = useState<TimeEntryDetailed | undefined>();
-  const [defaultStart, setDefaultStart] = useState<string | undefined>();
-  const [defaultEnd, setDefaultEnd] = useState<string | undefined>();
+  const [editEntry, setEditEntry] = useState<TimeEntryForModal | null>(null);
+  const [initialDate, setInitialDate] = useState<Date | undefined>();
 
   // Build the SWR key from the current view's date range.
   const swrKey = dateRange
@@ -113,9 +112,8 @@ export default function CalendarPage() {
 
   /** Click on an empty slot → create. */
   const handleSelect = useCallback((arg: DateSelectArg) => {
-    setEditEntry(undefined);
-    setDefaultStart(arg.startStr);
-    setDefaultEnd(arg.endStr);
+    setEditEntry(null);
+    setInitialDate(arg.start);
     setModalOpen(true);
     // Unselect the highlight.
     const calApi = calendarRef.current?.getApi();
@@ -126,13 +124,18 @@ export default function CalendarPage() {
   const handleEventClick = useCallback(
     (arg: EventClickArg) => {
       const ev = arg.event;
-      const props = ev.extendedProps;
       const item = data?.items.find((e) => e.id === ev.id);
       if (!item) return;
 
-      setEditEntry(item);
-      setDefaultStart(undefined);
-      setDefaultEnd(undefined);
+      setEditEntry({
+        id: item.id,
+        projectId: item.projectId,
+        taskId: item.taskId,
+        startTime: item.startTime,
+        endTime: item.endTime,
+        description: item.description,
+      });
+      setInitialDate(undefined);
       setModalOpen(true);
     },
     [data],
@@ -240,8 +243,7 @@ export default function CalendarPage() {
         onClose={() => setModalOpen(false)}
         onSaved={handleSaved}
         entry={editEntry}
-        defaultStart={defaultStart}
-        defaultEnd={defaultEnd}
+        initialDate={initialDate}
       />
     </>
   );
