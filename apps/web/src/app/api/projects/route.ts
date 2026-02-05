@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ProjectRepository, ClientRepository } from '@hour-tracker/database';
+import { ProjectRepository, ClientRepository, query } from '@hour-tracker/database';
 import {
   requireAuth,
   requireRole,
@@ -16,7 +16,7 @@ const clientRepo = new ClientRepository();
  *
  * List projects for the authenticated user's tenant.
  * Supports pagination (`page`, `pageSize`) and optional `clientId` filter.
- * Each project includes the parent client name.
+ * Each project includes the parent client name and `taskCount`.
  */
 export const GET = requireAuth(async (req: AuthenticatedRequest) => {
   try {
@@ -33,10 +33,28 @@ export const GET = requireAuth(async (req: AuthenticatedRequest) => {
       projectRepo.count(tenantId, clientId),
     ]);
 
+    // Fetch task counts for each project in a single query.
+    const projectIds = items.map((p) => p.id);
+    let taskCounts: Record<string, number> = {};
+
+    if (projectIds.length > 0) {
+      const placeholders = projectIds.map((_, i) => `$${i + 2}`).join(', ');
+      const rows = await query<{ project_id: string; count: string }>({
+        sql: `SELECT project_id, COUNT(*)::int AS count FROM tasks WHERE tenant_id = $1 AND project_id IN (${placeholders}) AND deleted_at IS NULL GROUP BY project_id`,
+        params: [tenantId, ...projectIds],
+      });
+      taskCounts = Object.fromEntries(rows.map((r) => [r.project_id, Number(r.count)]));
+    }
+
+    const itemsWithCount = items.map((p) => ({
+      ...p,
+      taskCount: taskCounts[p.id] ?? 0,
+    }));
+
     return NextResponse.json({
       success: true,
       data: {
-        items,
+        items: itemsWithCount,
         pagination: {
           page,
           pageSize,

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { TaskRepository, ProjectRepository } from '@hour-tracker/database';
+import { TaskRepository, ProjectRepository, query } from '@hour-tracker/database';
 import {
   requireAuth,
   requireRole,
@@ -16,7 +16,7 @@ const projectRepo = new ProjectRepository();
  *
  * List tasks for the authenticated user's tenant.
  * Supports pagination (`page`, `pageSize`) and optional `projectId` filter.
- * Each task includes the parent project name.
+ * Each task includes the parent project name and client name.
  */
 export const GET = requireAuth(async (req: AuthenticatedRequest) => {
   try {
@@ -33,10 +33,28 @@ export const GET = requireAuth(async (req: AuthenticatedRequest) => {
       taskRepo.count(tenantId, projectId),
     ]);
 
+    // Fetch client names for each task's project in a single query.
+    const projectIds = [...new Set(items.map((t) => t.projectId))];
+    let clientNames: Record<string, string> = {};
+
+    if (projectIds.length > 0) {
+      const placeholders = projectIds.map((_, i) => `$${i + 2}`).join(', ');
+      const rows = await query<{ id: string; client_name: string }>({
+        sql: `SELECT p.id, c.name AS client_name FROM projects p JOIN clients c ON c.id = p.client_id WHERE p.tenant_id = $1 AND p.id IN (${placeholders})`,
+        params: [tenantId, ...projectIds],
+      });
+      clientNames = Object.fromEntries(rows.map((r) => [r.id, r.client_name]));
+    }
+
+    const itemsWithClient = items.map((t) => ({
+      ...t,
+      clientName: clientNames[t.projectId] ?? '',
+    }));
+
     return NextResponse.json({
       success: true,
       data: {
-        items,
+        items: itemsWithClient,
         pagination: {
           page,
           pageSize,
