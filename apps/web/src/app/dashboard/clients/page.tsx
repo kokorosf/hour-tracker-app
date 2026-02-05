@@ -6,7 +6,7 @@ import { api } from '@/lib/api/client';
 import { useToast } from '@/../components/ui/toast';
 import Button from '@/../components/ui/button';
 import Modal from '@/../components/ui/modal';
-import ClientModal, { type ClientForModal } from '@/../components/dashboard/client-modal';
+import ClientForm from '@/../components/clients/client-form';
 import { Search, Plus, Pencil, Trash2 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -50,7 +50,7 @@ export default function ClientsPage() {
 
   // Modal state.
   const [modalOpen, setModalOpen] = useState(false);
-  const [editClient, setEditClient] = useState<ClientForModal | null>(null);
+  const [editClient, setEditClient] = useState<ClientRow | null>(null);
 
   // Delete confirmation state.
   const [deleteTarget, setDeleteTarget] = useState<ClientRow | null>(null);
@@ -88,7 +88,7 @@ export default function ClientsPage() {
   }, []);
 
   const handleEdit = useCallback((client: ClientRow) => {
-    setEditClient({ id: client.id, name: client.name });
+    setEditClient(client);
     setModalOpen(true);
   }, []);
 
@@ -303,11 +303,11 @@ export default function ClientsPage() {
         </>
       )}
 
-      {/* Create / Edit modal */}
-      <ClientModal
+      {/* Create / Edit form */}
+      <ClientForm
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        onSaved={handleSaved}
+        onSuccess={handleSaved}
         client={editClient}
       />
 
