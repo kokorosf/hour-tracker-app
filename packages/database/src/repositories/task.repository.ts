@@ -49,4 +49,21 @@ export class TaskRepository extends BaseRepository<Task> {
     const { rows } = await getPool().query(sql, params);
     return rows.map((r: Record<string, unknown>) => rowToCamel<Task>(r));
   }
+
+  /**
+   * Soft-delete all active tasks that belong to a given project.
+   * Used when cascading a project soft-delete.
+   */
+  async softDeleteByProject(projectId: string, tenantId: string): Promise<number> {
+    const now = new Date();
+    const sql = `
+      UPDATE tasks
+         SET deleted_at = $1, updated_at = $1
+       WHERE project_id = $2
+         AND tenant_id = $3
+         AND deleted_at IS NULL
+    `;
+    const { rowCount } = await getPool().query(sql, [now, projectId, tenantId]);
+    return rowCount ?? 0;
+  }
 }
