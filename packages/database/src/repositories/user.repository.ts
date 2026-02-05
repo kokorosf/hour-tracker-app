@@ -38,6 +38,15 @@ export class UserRepository extends BaseRepository<User> {
   }
 
   /**
+   * Count users within a tenant.
+   */
+  async count(tenantId: string): Promise<number> {
+    const sql = `SELECT COUNT(*)::int AS total FROM users WHERE tenant_id = $1`;
+    const { rows } = await getPool().query(sql, [tenantId]);
+    return (rows[0] as { total: number }).total;
+  }
+
+  /**
    * Find a user by email across **all** tenants.
    *
    * Used during login when the tenant is not yet known.  Returns the
