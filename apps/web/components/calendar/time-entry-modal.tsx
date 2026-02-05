@@ -31,6 +31,8 @@ export interface TimeEntryModalProps {
   initialDate?: Date;
   /** Called after a successful save so the parent can refresh data */
   onSaved?: () => void;
+  /** Called after a successful delete so the parent can refresh data */
+  onDeleted?: () => void;
 }
 
 interface ProjectOption {
@@ -172,10 +174,13 @@ export default function TimeEntryModal({
   entry,
   initialDate,
   onSaved,
+  onDeleted,
 }: TimeEntryModalProps) {
   const { showToast } = useToast();
   const { mutate: globalMutate } = useSWRConfig();
   const [submitting, setSubmitting] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const isEdit = entry !== null;
 
   // ---------------------------------------------------------------------------
@@ -326,6 +331,42 @@ export default function TimeEntryModal({
   };
 
   // ---------------------------------------------------------------------------
+  // Delete
+  // ---------------------------------------------------------------------------
+
+  const handleDelete = async () => {
+    if (!entry) return;
+    setDeleting(true);
+
+    try {
+      await api.delete(`/api/time-entries/${entry.id}`);
+      showToast('Time entry deleted.', 'success');
+
+      globalMutate(
+        (key) => typeof key === 'string' && key.startsWith('/api/time-entries'),
+        undefined,
+        { revalidate: true },
+      );
+
+      onDeleted?.();
+      onClose();
+    } catch (err) {
+      showToast(
+        (err as Error).message || 'Failed to delete time entry.',
+        'error',
+      );
+    } finally {
+      setDeleting(false);
+      setConfirmingDelete(false);
+    }
+  };
+
+  // Reset confirmation state when modal closes.
+  useEffect(() => {
+    if (!isOpen) setConfirmingDelete(false);
+  }, [isOpen]);
+
+  // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
 
@@ -336,13 +377,48 @@ export default function TimeEntryModal({
       title={isEdit ? 'Edit Time Entry' : 'New Time Entry'}
       size="lg"
       footer={
-        <div className="flex justify-end gap-3">
-          <Button variant="secondary" onClick={onClose} disabled={submitting}>
-            Cancel
-          </Button>
-          <Button loading={submitting} onClick={handleSubmit(onSubmit)}>
-            {isEdit ? 'Save Changes' : 'Create Entry'}
-          </Button>
+        <div className="flex items-center gap-3">
+          {/* Delete button — only in edit mode */}
+          {isEdit && (
+            confirmingDelete ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-red-600">Delete this entry?</span>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  loading={deleting}
+                  onClick={handleDelete}
+                >
+                  Confirm
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={deleting}
+                  onClick={() => setConfirmingDelete(false)}
+                >
+                  No
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="danger"
+                disabled={submitting}
+                onClick={() => setConfirmingDelete(true)}
+              >
+                Delete
+              </Button>
+            )
+          )}
+
+          <div className="ml-auto flex gap-3">
+            <Button variant="secondary" onClick={onClose} disabled={submitting || deleting}>
+              Cancel
+            </Button>
+            <Button loading={submitting} disabled={deleting} onClick={handleSubmit(onSubmit)}>
+              {isEdit ? 'Save Changes' : 'Create Entry'}
+            </Button>
+          </div>
         </div>
       }
     >

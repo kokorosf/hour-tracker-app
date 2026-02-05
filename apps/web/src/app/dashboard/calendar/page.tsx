@@ -141,46 +141,116 @@ export default function CalendarPage() {
     [data],
   );
 
-  /** Drag event to a different time slot. */
+  /** Drag event to a different time slot (with optimistic update). */
   const handleEventDrop = useCallback(
     async (arg: EventDropArg) => {
+      const eventId = arg.event.id;
+      const newStart = arg.event.startStr;
+      const newEnd = arg.event.endStr;
+
+      // Optimistic update — immediately reflect the move in the SWR cache.
+      const optimistic = data
+        ? {
+            ...data,
+            items: data.items.map((item) =>
+              item.id === eventId
+                ? { ...item, startTime: newStart, endTime: newEnd }
+                : item,
+            ),
+          }
+        : data;
+
       try {
-        await api.put(`/api/time-entries/${arg.event.id}`, {
-          startTime: arg.event.startStr,
-          endTime: arg.event.endStr,
-        });
+        await mutate(
+          async () => {
+            await api.put(`/api/time-entries/${eventId}`, {
+              startTime: newStart,
+              endTime: newEnd,
+            });
+            // Return the optimistic shape so SWR keeps it until revalidation.
+            return optimistic;
+          },
+          {
+            optimisticData: optimistic,
+            rollbackOnError: true,
+            revalidate: true,
+          },
+        );
         showToast('Entry moved.', 'success');
-        mutate();
       } catch (err) {
         showToast((err as Error).message || 'Failed to move entry.', 'error');
         arg.revert();
       }
     },
-    [mutate, showToast],
+    [data, mutate, showToast],
   );
 
-  /** Resize event → update duration. */
+  /** Resize event → update duration (with optimistic update). */
   const handleEventResize = useCallback(
     async (arg: EventResizeDoneArg) => {
+      const eventId = arg.event.id;
+      const newStart = arg.event.startStr;
+      const newEnd = arg.event.endStr;
+
+      const optimistic = data
+        ? {
+            ...data,
+            items: data.items.map((item) =>
+              item.id === eventId
+                ? { ...item, startTime: newStart, endTime: newEnd }
+                : item,
+            ),
+          }
+        : data;
+
       try {
-        await api.put(`/api/time-entries/${arg.event.id}`, {
-          startTime: arg.event.startStr,
-          endTime: arg.event.endStr,
-        });
+        await mutate(
+          async () => {
+            await api.put(`/api/time-entries/${eventId}`, {
+              startTime: newStart,
+              endTime: newEnd,
+            });
+            return optimistic;
+          },
+          {
+            optimisticData: optimistic,
+            rollbackOnError: true,
+            revalidate: true,
+          },
+        );
         showToast('Duration updated.', 'success');
-        mutate();
       } catch (err) {
         showToast((err as Error).message || 'Failed to resize entry.', 'error');
         arg.revert();
       }
     },
-    [mutate, showToast],
+    [data, mutate, showToast],
   );
 
   /** After modal save — refetch. */
   const handleSaved = useCallback(() => {
     mutate();
   }, [mutate]);
+
+  /** After modal delete — optimistically remove from cache + refetch. */
+  const handleDeleted = useCallback(() => {
+    const deletedId = editEntry?.id;
+    if (deletedId && data) {
+      mutate(
+        {
+          ...data,
+          items: data.items.filter((item) => item.id !== deletedId),
+          pagination: {
+            ...data.pagination,
+            total: data.pagination.total - 1,
+          },
+        },
+        { revalidate: true },
+      );
+    } else {
+      mutate();
+    }
+  }, [data, editEntry, mutate]);
 
   // -----------------------------------------------------------------------
   // Render
@@ -242,6 +312,7 @@ export default function CalendarPage() {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         onSaved={handleSaved}
+        onDeleted={handleDeleted}
         entry={editEntry}
         initialDate={initialDate}
       />
