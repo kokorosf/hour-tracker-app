@@ -22,8 +22,8 @@ export default function DashboardShell({
   return (
     <div className="min-h-screen bg-slate-50">
       <Sidebar
-        role={role}
-        open={sidebarOpen}
+        userRole={role}
+        isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
 
