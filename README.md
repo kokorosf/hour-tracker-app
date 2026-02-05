@@ -13,18 +13,44 @@ A monorepo for the Hour Tracker multitenant time-tracking SaaS built with Next.j
 
 - Node.js 20+
 - npm 10+
-- PostgreSQL 16+
+- Docker and Docker Compose
 
 ## Setup
+
+1. Install dependencies:
 
 ```bash
 npm install
 ```
 
-Create a `.env` file for the database connection (and future auth secrets):
+2. Copy the example environment file and adjust values if needed:
 
 ```bash
-DATABASE_URL=postgres://user:password@localhost:5432/hour_tracker
+cp .env.example .env
+```
+
+3. Start PostgreSQL and Redis:
+
+```bash
+docker compose up -d
+```
+
+To check that the services are healthy:
+
+```bash
+docker compose ps
+```
+
+To stop the services:
+
+```bash
+docker compose down
+```
+
+To stop the services **and delete all data**:
+
+```bash
+docker compose down -v
 ```
 
 ## Development
