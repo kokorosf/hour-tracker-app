@@ -1,16 +1,25 @@
-import { Pool } from 'pg';
+export { getPool, query, transaction, testConnection } from './connection';
+export type { QueryOptions } from './connection';
+
+export { BaseRepository } from './repositories/base.repository';
+export type { RepositoryQueryOptions, SortDirection } from './repositories/base.repository';
+
+export { ClientRepository } from './repositories/client.repository';
+export { ProjectRepository } from './repositories/project.repository';
+export { TaskRepository } from './repositories/task.repository';
+export { TimeEntryRepository } from './repositories/time-entry.repository';
+export type { ProjectHoursSummary } from './repositories/time-entry.repository';
+export { UserRepository } from './repositories/user.repository';
+
+import { query } from './connection';
 
 import type { Tenant } from '@hour-tracker/types';
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
-
 export async function getTenantById(id: string): Promise<Tenant | null> {
-  const result = await pool.query<Tenant>(
-    'SELECT id, name, plan, created_at as "createdAt", updated_at as "updatedAt" FROM tenants WHERE id = $1',
-    [id],
-  );
+  const rows = await query<Tenant & import('pg').QueryResultRow>({
+    sql: 'SELECT id, name, plan, created_at as "createdAt", updated_at as "updatedAt" FROM tenants WHERE id = $1',
+    params: [id],
+  });
 
-  return result.rows[0] ?? null;
+  return rows[0] ?? null;
 }
