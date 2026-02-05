@@ -1,13 +1,21 @@
-export type Tenant = {
-  id: string;
-  name: string;
-  slug: string;
-  createdAt: string;
-};
-
-export type User = {
-  id: string;
-  email: string;
-  displayName: string;
-  tenantId: string;
-};
+export type {
+  Tenant,
+  User,
+  UserWithPassword,
+  Client,
+  Project,
+  Task,
+  TimeEntry,
+  CreateTenantDto,
+  UpdateTenantDto,
+  CreateUserDto,
+  UpdateUserDto,
+  CreateClientDto,
+  UpdateClientDto,
+  CreateProjectDto,
+  UpdateProjectDto,
+  CreateTaskDto,
+  UpdateTaskDto,
+  CreateTimeEntryDto,
+  UpdateTimeEntryDto,
+} from './entities';

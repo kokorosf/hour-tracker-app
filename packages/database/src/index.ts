@@ -3,13 +3,13 @@ import { Pool } from 'pg';
 import type { Tenant } from '@hour-tracker/types';
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
+  connectionString: process.env.DATABASE_URL,
 });
 
-export async function getTenantBySlug(slug: string): Promise<Tenant | null> {
+export async function getTenantById(id: string): Promise<Tenant | null> {
   const result = await pool.query<Tenant>(
-    'SELECT id, name, slug, created_at as "createdAt" FROM tenants WHERE slug = $1',
-    [slug]
+    'SELECT id, name, plan, created_at as "createdAt", updated_at as "updatedAt" FROM tenants WHERE id = $1',
+    [id],
   );
 
   return result.rows[0] ?? null;
