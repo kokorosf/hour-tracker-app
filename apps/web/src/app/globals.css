@@ -9,3 +9,36 @@
 body {
   @apply bg-slate-50 text-slate-900;
 }
+
+/* FullCalendar theme overrides */
+.fc {
+  --fc-border-color: #e5e7eb;
+  --fc-today-bg-color: #eff6ff;
+  --fc-now-indicator-color: #3b82f6;
+  --fc-button-bg-color: #f3f4f6;
+  --fc-button-border-color: #d1d5db;
+  --fc-button-text-color: #374151;
+  --fc-button-hover-bg-color: #e5e7eb;
+  --fc-button-hover-border-color: #9ca3af;
+  --fc-button-active-bg-color: #3b82f6;
+  --fc-button-active-border-color: #2563eb;
+  --fc-button-active-text-color: #ffffff;
+}
+
+.fc .fc-button {
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.375rem;
+}
+
+.fc .fc-toolbar-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.fc .fc-event {
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}

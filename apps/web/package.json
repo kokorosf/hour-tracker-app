@@ -11,6 +11,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fullcalendar/daygrid": "^6.1.20",
+    "@fullcalendar/interaction": "^6.1.20",
+    "@fullcalendar/react": "^6.1.20",
+    "@fullcalendar/timegrid": "^6.1.20",
     "@headlessui/react": "^2.2.9",
     "@hour-tracker/database": "*",
     "@hour-tracker/types": "*",
@@ -21,7 +25,8 @@
     "next-auth": "^5.0.0-beta.30",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-hook-form": "^7.71.1"
+    "react-hook-form": "^7.71.1",
+    "swr": "^2.4.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
