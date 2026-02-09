@@ -19,6 +19,7 @@
     "@hour-tracker/database": "*",
     "@hour-tracker/types": "*",
     "@hour-tracker/ui": "*",
+    "@sendgrid/mail": "^8.1.6",
     "bcryptjs": "^3.0.3",
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",

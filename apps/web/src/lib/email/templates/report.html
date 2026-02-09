@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Time Entry Report</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f5f7;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f5f7;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;">
+          <!-- Header -->
+          <tr>
+            <td style="background-color:#3b82f6;padding:24px 32px;">
+              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;">Hour Tracker</h1>
+            </td>
+          </tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:32px;">
+              <h2 style="margin:0 0 8px;font-size:20px;color:#1e293b;">Time Entry Report</h2>
+              <p style="margin:0 0 24px;font-size:14px;color:#64748b;">{{dateRange}}</p>
+
+              <!-- Summary cards -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
+                <tr>
+                  <td width="50%" style="padding:0 6px 12px 0;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                           style="background-color:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;">
+                      <tr>
+                        <td style="padding:14px 16px;">
+                          <p style="margin:0 0 4px;font-size:12px;color:#0284c7;text-transform:uppercase;letter-spacing:0.5px;">Total Duration</p>
+                          <p style="margin:0;font-size:20px;font-weight:700;color:#0c4a6e;">{{totalDuration}}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td width="50%" style="padding:0 0 12px 6px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                           style="background-color:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;">
+                      <tr>
+                        <td style="padding:14px 16px;">
+                          <p style="margin:0 0 4px;font-size:12px;color:#16a34a;text-transform:uppercase;letter-spacing:0.5px;">Total Entries</p>
+                          <p style="margin:0;font-size:20px;font-weight:700;color:#14532d;">{{totalEntries}}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td width="50%" style="padding:0 6px 0 0;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                           style="background-color:#faf5ff;border:1px solid #e9d5ff;border-radius:6px;">
+                      <tr>
+                        <td style="padding:14px 16px;">
+                          <p style="margin:0 0 4px;font-size:12px;color:#9333ea;text-transform:uppercase;letter-spacing:0.5px;">Projects</p>
+                          <p style="margin:0;font-size:20px;font-weight:700;color:#3b0764;">{{projectCount}}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td width="50%" style="padding:0 0 0 6px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                           style="background-color:#fff7ed;border:1px solid #fed7aa;border-radius:6px;">
+                      <tr>
+                        <td style="padding:14px 16px;">
+                          <p style="margin:0 0 4px;font-size:12px;color:#ea580c;text-transform:uppercase;letter-spacing:0.5px;">Users</p>
+                          <p style="margin:0;font-size:20px;font-weight:700;color:#431407;">{{userCount}}</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0;font-size:14px;line-height:1.6;color:#475569;">
+                A detailed PDF report is attached to this email. Open the attachment to view the full time entry breakdown.
+              </p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 32px;background-color:#f8fafc;border-top:1px solid #e2e8f0;">
+              <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">
+                &copy; Hour Tracker &bull; This report was generated automatically.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
