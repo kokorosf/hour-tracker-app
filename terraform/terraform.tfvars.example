@@ -1,0 +1,7 @@
+project_id       = "your-gcp-project-id"
+region           = "us-central1"
+zone             = "us-central1-a"
+db_password      = "CHANGE_ME_strong_random_password"
+auth_secret      = "CHANGE_ME_random_base64_string"
+sendgrid_api_key = "SG.your-sendgrid-api-key"
+docker_image     = "gcr.io/your-gcp-project-id/hour-tracker-web:latest"

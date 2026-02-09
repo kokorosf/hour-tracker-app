@@ -5,5 +5,13 @@ dist
 .env
 .env.*
 !.env.example
+!.env.production.example
 *.log
 .DS_Store
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/terraform.tfvars
+!terraform/terraform.tfvars.example

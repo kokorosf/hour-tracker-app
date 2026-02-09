@@ -1,0 +1,35 @@
+node_modules
+.next
+.git
+.gitignore
+
+# Tests
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+**/__tests__
+**/jest.config.*
+**/jest.setup.*
+coverage
+
+# Dev/editor files
+.env
+.env.local
+.env.development
+.vscode
+.idea
+*.swp
+*.swo
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Terraform
+terraform
+
+# Docs
+*.md
+LICENSE
