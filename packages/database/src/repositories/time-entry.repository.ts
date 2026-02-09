@@ -30,6 +30,11 @@ export interface TimeEntryDetailed extends TimeEntry {
   userEmail: string;
 }
 
+/** A time entry row joined with project, client, task, and user names. */
+export interface TimeEntryWithClient extends TimeEntryDetailed {
+  clientName: string;
+}
+
 /** Filter options for {@link TimeEntryRepository.findFiltered}. */
 export interface TimeEntryFilterOptions extends RepositoryQueryOptions {
   userId?: string;
@@ -102,6 +107,65 @@ export class TimeEntryRepository extends BaseRepository<TimeEntry> {
 
     const { rows } = await getPool().query(sql, params);
     return rows.map((r: Record<string, unknown>) => rowToCamel<TimeEntryDetailed>(r));
+  }
+
+  /**
+   * Like {@link findFiltered} but also joins the client name via projects.
+   * Used for exports that need the Client column.
+   */
+  async findFilteredWithClient(
+    tenantId: string,
+    options: TimeEntryFilterOptions = {},
+  ): Promise<TimeEntryWithClient[]> {
+    const { limit, offset, userId, projectId, startDate, endDate } = options;
+    const params: unknown[] = [tenantId];
+    const conditions = ['te.tenant_id = $1', 'te.deleted_at IS NULL'];
+
+    if (userId) {
+      params.push(userId);
+      conditions.push(`te.user_id = $${params.length}`);
+    }
+    if (projectId) {
+      params.push(projectId);
+      conditions.push(`te.project_id = $${params.length}`);
+    }
+    if (startDate) {
+      params.push(startDate);
+      conditions.push(`te.start_time >= $${params.length}`);
+    }
+    if (endDate) {
+      params.push(endDate);
+      conditions.push(`te.start_time <= $${params.length}`);
+    }
+
+    let sql = `
+      SELECT te.id, te.tenant_id, te.user_id, te.project_id, te.task_id,
+             te.start_time, te.end_time, te.duration, te.description,
+             te.deleted_at, te.created_at, te.updated_at,
+             p.name  AS project_name,
+             c.name  AS client_name,
+             t.name  AS task_name,
+             u.email AS user_email
+        FROM time_entries te
+        JOIN projects p ON p.id = te.project_id
+        JOIN clients  c ON c.id = p.client_id
+        JOIN tasks    t ON t.id = te.task_id
+        JOIN users    u ON u.id = te.user_id
+       WHERE ${conditions.join(' AND ')}
+       ORDER BY te.start_time DESC
+    `;
+
+    if (limit !== undefined) {
+      params.push(limit);
+      sql += ` LIMIT $${params.length}`;
+    }
+    if (offset !== undefined) {
+      params.push(offset);
+      sql += ` OFFSET $${params.length}`;
+    }
+
+    const { rows } = await getPool().query(sql, params);
+    return rows.map((r: Record<string, unknown>) => rowToCamel<TimeEntryWithClient>(r));
   }
 
   /**

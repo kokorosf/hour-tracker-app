@@ -222,26 +222,31 @@ export default function ReportsClient({ userRole }: ReportsClientProps) {
     setSelectedProject(''); // reset project when client changes
   }, []);
 
+  const buildExportBody = useCallback(() => {
+    const body: Record<string, string | undefined> = {};
+    if (appliedFilters.startDate) {
+      body.startDate = new Date(appliedFilters.startDate).toISOString();
+    }
+    if (appliedFilters.endDate) {
+      const end = new Date(appliedFilters.endDate);
+      end.setHours(23, 59, 59, 999);
+      body.endDate = end.toISOString();
+    }
+    if (appliedFilters.projectId) body.projectId = appliedFilters.projectId;
+    if (isAdmin && appliedFilters.userId) body.userId = appliedFilters.userId;
+    return body;
+  }, [appliedFilters, isAdmin]);
+
   const handleExportCsv = useCallback(async () => {
     setExportingCsv(true);
     try {
-      const params = new URLSearchParams();
-      if (appliedFilters.startDate) {
-        params.set('startDate', new Date(appliedFilters.startDate).toISOString());
-      }
-      if (appliedFilters.endDate) {
-        const end = new Date(appliedFilters.endDate);
-        end.setHours(23, 59, 59, 999);
-        params.set('endDate', end.toISOString());
-      }
-      if (appliedFilters.projectId) params.set('projectId', appliedFilters.projectId);
-      if (isAdmin && appliedFilters.userId) params.set('userId', appliedFilters.userId);
-      params.set('format', 'csv');
-
-      const response = await fetch(`/api/reports/export?${params.toString()}`, {
+      const response = await fetch('/api/reports/csv', {
+        method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token') ?? ''}`,
         },
+        body: JSON.stringify(buildExportBody()),
       });
 
       if (!response.ok) {
@@ -263,28 +268,18 @@ export default function ReportsClient({ userRole }: ReportsClientProps) {
     } finally {
       setExportingCsv(false);
     }
-  }, [appliedFilters, isAdmin, showToast]);
+  }, [appliedFilters, buildExportBody, showToast]);
 
   const handleExportPdf = useCallback(async () => {
     setExportingPdf(true);
     try {
-      const params = new URLSearchParams();
-      if (appliedFilters.startDate) {
-        params.set('startDate', new Date(appliedFilters.startDate).toISOString());
-      }
-      if (appliedFilters.endDate) {
-        const end = new Date(appliedFilters.endDate);
-        end.setHours(23, 59, 59, 999);
-        params.set('endDate', end.toISOString());
-      }
-      if (appliedFilters.projectId) params.set('projectId', appliedFilters.projectId);
-      if (isAdmin && appliedFilters.userId) params.set('userId', appliedFilters.userId);
-      params.set('format', 'pdf');
-
-      const response = await fetch(`/api/reports/export?${params.toString()}`, {
+      const response = await fetch('/api/reports/pdf', {
+        method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token') ?? ''}`,
         },
+        body: JSON.stringify(buildExportBody()),
       });
 
       if (!response.ok) {
@@ -306,7 +301,7 @@ export default function ReportsClient({ userRole }: ReportsClientProps) {
     } finally {
       setExportingPdf(false);
     }
-  }, [appliedFilters, isAdmin, showToast]);
+  }, [appliedFilters, buildExportBody, showToast]);
 
   const handleEmailReport = useCallback(async () => {
     setSendingEmail(true);

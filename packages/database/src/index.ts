@@ -13,6 +13,7 @@ export { TimeEntryRepository } from './repositories/time-entry.repository';
 export type {
   ProjectHoursSummary,
   TimeEntryDetailed,
+  TimeEntryWithClient,
   TimeEntryFilterOptions,
 } from './repositories/time-entry.repository';
 export { UserRepository } from './repositories/user.repository';
