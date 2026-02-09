@@ -25,23 +25,39 @@ import { Clock, DollarSign, FolderOpen, FileQuestion, Calendar } from 'lucide-re
 // ---------------------------------------------------------------------------
 
 interface SummaryData {
-  totalMinutes: number;
-  billableMinutes: number;
+  // New fields (hours as decimal)
+  totalHours: number;
+  billableHours: number;
+  nonBillableHours: number;
   activeProjects: number;
   pendingEntries: number;
+  projectBreakdown: {
+    projectId: string;
+    projectName: string;
+    hours: number;
+    billable: boolean;
+  }[];
+  topProjects: {
+    projectId: string;
+    projectName: string;
+    hours: number;
+  }[];
+  dailyHours: {
+    date: string;
+    hours: number;
+  }[];
+  userBreakdown?: {
+    userId: string;
+    userName: string;
+    hours: number;
+  }[];
+  // Legacy fields (minutes) for backward compatibility
+  totalMinutes: number;
+  billableMinutes: number;
   billableBreakdown: {
     billable: number;
     nonBillable: number;
   };
-  topProjects: {
-    projectId: string;
-    projectName: string;
-    totalMinutes: number;
-  }[];
-  dailyHours: {
-    date: string;
-    totalMinutes: number;
-  }[];
 }
 
 type DateRangePreset = 'this_week' | 'last_week' | 'this_month' | 'last_month' | 'custom';
@@ -102,6 +118,13 @@ function formatMinutesToHours(minutes: number): string {
   const mins = minutes % 60;
   if (mins === 0) return `${hours}h`;
   return `${hours}h ${mins}m`;
+}
+
+function formatHours(hours: number): string {
+  const wholeHours = Math.floor(hours);
+  const mins = Math.round((hours - wholeHours) * 60);
+  if (mins === 0) return `${wholeHours}h`;
+  return `${wholeHours}h ${mins}m`;
 }
 
 function formatDateForInput(date: Date): string {
@@ -172,7 +195,7 @@ export default function DashboardPage() {
     return data.topProjects.map((p) => ({
       name: p.projectName.length > 15 ? p.projectName.slice(0, 15) + '...' : p.projectName,
       fullName: p.projectName,
-      hours: Number((p.totalMinutes / 60).toFixed(1)),
+      hours: p.hours,
     }));
   }, [data]);
 
@@ -180,7 +203,7 @@ export default function DashboardPage() {
     if (!data) return [];
     return data.dailyHours.map((d) => ({
       date: new Date(d.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-      hours: Number((d.totalMinutes / 60).toFixed(1)),
+      hours: d.hours,
     }));
   }, [data]);
 
@@ -292,7 +315,7 @@ export default function DashboardPage() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-gray-500">Total Hours</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {formatMinutesToHours(data.totalMinutes)}
+                    {formatHours(data.totalHours)}
                   </p>
                 </div>
               </div>
@@ -307,7 +330,7 @@ export default function DashboardPage() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-gray-500">Billable Hours</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {formatMinutesToHours(data.billableMinutes)}
+                    {formatHours(data.billableHours)}
                   </p>
                 </div>
               </div>
@@ -366,7 +389,7 @@ export default function DashboardPage() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: number) => formatMinutesToHours(value)}
+                      formatter={(value: number) => formatHours(value / 60)}
                       contentStyle={{
                         backgroundColor: 'white',
                         border: '1px solid #e5e7eb',
