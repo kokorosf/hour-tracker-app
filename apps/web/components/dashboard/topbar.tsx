@@ -1,14 +1,16 @@
 'use client';
 
 import { signOut } from 'next-auth/react';
+import { Play } from 'lucide-react';
 
 export interface TopbarProps {
   email: string;
   tenantName?: string;
   onMenuToggle: () => void;
+  onStartTimer?: () => void;
 }
 
-export default function Topbar({ email, tenantName, onMenuToggle }: TopbarProps) {
+export default function Topbar({ email, tenantName, onMenuToggle, onStartTimer }: TopbarProps) {
   const handleLogout = () => {
     signOut({ callbackUrl: '/login' });
   };
@@ -32,6 +34,18 @@ export default function Topbar({ email, tenantName, onMenuToggle }: TopbarProps)
 
       {/* Spacer */}
       <div className="flex-1" />
+
+      {/* Start Timer */}
+      {onStartTimer && (
+        <button
+          type="button"
+          onClick={onStartTimer}
+          className="flex items-center gap-1.5 rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+        >
+          <Play className="h-4 w-4" aria-hidden="true" />
+          <span className="hidden sm:inline">Start Timer</span>
+        </button>
+      )}
 
       {/* Tenant name */}
       {tenantName && (
