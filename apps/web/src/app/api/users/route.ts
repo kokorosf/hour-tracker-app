@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { hash } from 'bcryptjs';
+import { genSalt, hash } from 'bcryptjs';
 import { UserRepository } from '@hour-tracker/database';
 import {
   requireAuth,
@@ -99,7 +99,8 @@ export const POST = requireRole('admin')(async (req: AuthenticatedRequest) => {
 
     // --- Create user with a temporary hashed password ---
     const tempPassword = crypto.randomUUID();
-    const passwordHash = await hash(tempPassword, 10);
+    const salt = await genSalt(10);
+    const passwordHash = await hash(tempPassword, salt);
 
     // The BaseRepository.create doesn't handle password_hash directly.
     // Insert manually so we can include the password_hash column.

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { hash } from 'bcryptjs';
+import { genSalt, hash } from 'bcryptjs';
 import { UserRepository, transaction } from '@hour-tracker/database';
 import type { ExtendedUser } from '@hour-tracker/types';
 import { encode } from 'next-auth/jwt';
@@ -55,7 +55,8 @@ export async function POST(request: Request) {
     }
 
     // ---- Hash password ----
-    const passwordHash = await hash(password, 10);
+    const salt = await genSalt(10);
+    const passwordHash = await hash(password, salt);
 
     // ---- Create tenant + user in a transaction ----
     const { tenant, user } = await transaction(async (client) => {
