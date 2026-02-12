@@ -42,6 +42,29 @@ export default function LoginPage() {
     setSubmitting(true);
 
     try {
+      // Get JWT token for API client authentication.
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+        }),
+      });
+
+      const body = await res.json();
+
+      if (!res.ok || !body.success) {
+        showToast(body.error ?? 'Invalid email or password.', 'error');
+        return;
+      }
+
+      // Store token for the API client.
+      if (body.token) {
+        localStorage.setItem('token', body.token);
+      }
+
+      // Establish NextAuth session.
       const result = await signIn('credentials', {
         email: data.email,
         password: data.password,
