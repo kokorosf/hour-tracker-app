@@ -52,6 +52,7 @@ export async function POST(request: Request) {
 
     const token = await encode({
       secret,
+      salt: 'authjs.session-token',
       token: {
         userId: extendedUser.id,
         email: extendedUser.email,

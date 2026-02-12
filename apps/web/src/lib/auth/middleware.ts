@@ -60,9 +60,7 @@ async function decodeToken(req: NextRequest): Promise<ExtendedUser | null> {
     const payload = await decode({
       token,
       secret: getSecret(),
-      // NextAuth v5 uses `authjs.session-token` as the default cookie name
-      // but we are decoding a raw token string, so salt is not relevant here.
-      salt: '',
+      salt: 'authjs.session-token',
     });
 
     if (
