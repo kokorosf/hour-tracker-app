@@ -6,7 +6,7 @@ import { api } from '@/lib/api/client';
 import { useToast } from '@/../components/ui/toast';
 import Button from '@/../components/ui/button';
 import Input from '@/../components/ui/input';
-import { User, Lock, Building2, Mail } from 'lucide-react';
+import { User, Lock, Building2, Mail, MessageCircle } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -21,6 +21,7 @@ interface CurrentUser {
 
 interface TenantSettings {
   accountantEmail: string | null;
+  telegramChatId: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -57,9 +58,18 @@ export default function SettingsPage() {
   const [accountantEmail, setAccountantEmail] = useState('');
   const [savingAccountantEmail, setSavingAccountantEmail] = useState(false);
 
+  // Telegram bot state (admin only).
+  const [telegramChatId, setTelegramChatId] = useState('');
+  const [savingTelegram, setSavingTelegram] = useState(false);
+  const [telegramConnected, setTelegramConnected] = useState(false);
+
   useEffect(() => {
     if (tenantSettings?.accountantEmail) {
       setAccountantEmail(tenantSettings.accountantEmail);
+    }
+    if (tenantSettings?.telegramChatId) {
+      setTelegramChatId(tenantSettings.telegramChatId);
+      setTelegramConnected(true);
     }
   }, [tenantSettings]);
 
@@ -112,6 +122,51 @@ export default function SettingsPage() {
     },
     [accountantEmail, showToast],
   );
+
+  const handleTelegramConnect = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!telegramChatId.trim()) return;
+
+      setSavingTelegram(true);
+      try {
+        // Save the chat ID.
+        await api.put('/api/tenants/settings', {
+          telegramChatId: telegramChatId.trim(),
+        });
+        // Register the webhook.
+        await api.post('/api/telegram/setup');
+        setTelegramConnected(true);
+        showToast('Telegram bot connected.', 'success');
+      } catch (err) {
+        const message = (err as Error).message || 'Failed to connect Telegram bot.';
+        showToast(message, 'error');
+      } finally {
+        setSavingTelegram(false);
+      }
+    },
+    [telegramChatId, showToast],
+  );
+
+  const handleTelegramDisconnect = useCallback(async () => {
+    setSavingTelegram(true);
+    try {
+      // Remove webhook.
+      await api.delete('/api/telegram/setup');
+      // Clear the chat ID.
+      await api.put('/api/tenants/settings', {
+        telegramChatId: null,
+      });
+      setTelegramChatId('');
+      setTelegramConnected(false);
+      showToast('Telegram bot disconnected.', 'success');
+    } catch (err) {
+      const message = (err as Error).message || 'Failed to disconnect Telegram bot.';
+      showToast(message, 'error');
+    } finally {
+      setSavingTelegram(false);
+    }
+  }, [showToast]);
 
   // ---------------------------------------------------------------------------
   // Render
@@ -243,6 +298,84 @@ export default function SettingsPage() {
                   </Button>
                 </div>
               </form>
+            </div>
+          )}
+
+          {/* Telegram bot section (admin only) */}
+          {isAdmin && (
+            <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+              <div className="border-b border-gray-200 px-6 py-4">
+                <div className="flex items-center gap-2">
+                  <MessageCircle className="h-5 w-5 text-gray-500" />
+                  <h2 className="text-lg font-semibold text-gray-900">Telegram Bot</h2>
+                </div>
+              </div>
+              <div className="px-6 py-5">
+                <div className="max-w-md space-y-4">
+                  {telegramConnected ? (
+                    <>
+                      <div className="flex items-center gap-2 rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
+                        <div className="h-2 w-2 rounded-full bg-green-500" />
+                        Connected (Chat ID: {telegramChatId})
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Your Telegram bot is active. Send messages to the bot to query
+                        your team&apos;s hours, projects, and more using natural language.
+                      </p>
+                      <Button
+                        onClick={handleTelegramDisconnect}
+                        loading={savingTelegram}
+                        size="sm"
+                        variant="danger"
+                      >
+                        Disconnect
+                      </Button>
+                    </>
+                  ) : (
+                    <form onSubmit={handleTelegramConnect} className="space-y-4">
+                      <div className="rounded-md bg-gray-50 px-3 py-3 text-xs text-gray-600 space-y-2">
+                        <p className="font-medium text-gray-700">Setup instructions:</p>
+                        <ol className="list-decimal list-inside space-y-1">
+                          <li>
+                            Open Telegram and message{' '}
+                            <span className="font-mono">@BotFather</span>
+                          </li>
+                          <li>
+                            Send <span className="font-mono">/newbot</span> and follow the
+                            prompts
+                          </li>
+                          <li>
+                            Copy the bot token and set it as{' '}
+                            <span className="font-mono">TELEGRAM_BOT_TOKEN</span> in your
+                            environment
+                          </li>
+                          <li>
+                            Send any message to your new bot — it will reply with your
+                            Chat ID
+                          </li>
+                          <li>Paste the Chat ID below and click Connect</li>
+                        </ol>
+                      </div>
+                      <Input
+                        label="Telegram Chat ID"
+                        type="text"
+                        value={telegramChatId}
+                        onChange={(val) => setTelegramChatId(val)}
+                        placeholder="e.g. 123456789"
+                        required
+                        disabled={savingTelegram}
+                      />
+                      <p className="text-xs text-gray-500">
+                        Also ensure <span className="font-mono">ANTHROPIC_API_KEY</span>{' '}
+                        is set in your environment for the AI-powered responses.
+                      </p>
+                      <Button type="submit" loading={savingTelegram} size="sm">
+                        Connect
+                      </Button>
+                    </form>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 

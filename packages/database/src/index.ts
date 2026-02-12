@@ -26,6 +26,7 @@ export async function getTenantById(id: string): Promise<Tenant | null> {
   const rows = await query<Tenant & import('pg').QueryResultRow>({
     sql: `SELECT id, name, plan,
             accountant_email AS "accountantEmail",
+            telegram_chat_id AS "telegramChatId",
             created_at AS "createdAt",
             updated_at AS "updatedAt"
           FROM tenants WHERE id = $1`,
@@ -37,7 +38,7 @@ export async function getTenantById(id: string): Promise<Tenant | null> {
 
 export async function updateTenant(
   id: string,
-  data: { accountantEmail?: string | null },
+  data: { accountantEmail?: string | null; telegramChatId?: string | null },
 ): Promise<Tenant | null> {
   const sets: string[] = [];
   const values: unknown[] = [];
@@ -49,6 +50,12 @@ export async function updateTenant(
     idx++;
   }
 
+  if (data.telegramChatId !== undefined) {
+    sets.push(`telegram_chat_id = $${idx}`);
+    values.push(data.telegramChatId);
+    idx++;
+  }
+
   if (sets.length === 0) return getTenantById(id);
 
   sets.push(`updated_at = now()`);
@@ -57,6 +64,7 @@ export async function updateTenant(
   const sql = `UPDATE tenants SET ${sets.join(', ')} WHERE id = $${idx}
                RETURNING id, name, plan,
                  accountant_email AS "accountantEmail",
+                 telegram_chat_id AS "telegramChatId",
                  created_at AS "createdAt",
                  updated_at AS "updatedAt"`;
 
@@ -72,6 +80,7 @@ export async function getTenantsWithAccountantEmail(): Promise<Tenant[]> {
   const rows = await query<Tenant & import('pg').QueryResultRow>({
     sql: `SELECT id, name, plan,
             accountant_email AS "accountantEmail",
+            telegram_chat_id AS "telegramChatId",
             created_at AS "createdAt",
             updated_at AS "updatedAt"
           FROM tenants
@@ -79,4 +88,19 @@ export async function getTenantsWithAccountantEmail(): Promise<Tenant[]> {
   });
 
   return rows;
+}
+
+export async function getTenantByTelegramChatId(chatId: string): Promise<Tenant | null> {
+  const rows = await query<Tenant & import('pg').QueryResultRow>({
+    sql: `SELECT id, name, plan,
+            accountant_email AS "accountantEmail",
+            telegram_chat_id AS "telegramChatId",
+            created_at AS "createdAt",
+            updated_at AS "updatedAt"
+          FROM tenants
+          WHERE telegram_chat_id = $1`,
+    params: [chatId],
+  });
+
+  return rows[0] ?? null;
 }

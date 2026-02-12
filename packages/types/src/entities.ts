@@ -12,6 +12,8 @@ export interface Tenant {
   plan: string;
   /** Email address of the tenant's accountant for monthly reports. */
   accountantEmail: string | null;
+  /** Telegram chat ID for the admin bot integration. */
+  telegramChatId: string | null;
   /** Row creation timestamp. */
   createdAt: Date;
   /** Row last-update timestamp. */
@@ -142,6 +144,8 @@ export interface UpdateTenantDto {
   plan?: string;
   /** Accountant email for monthly reports. */
   accountantEmail?: string | null;
+  /** Telegram chat ID for bot integration. */
+  telegramChatId?: string | null;
 }
 
 /** Fields required to create a new user (includes plain-text password). */

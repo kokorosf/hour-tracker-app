@@ -27,7 +27,10 @@ export const GET = requireRole('admin')(async (req: AuthenticatedRequest) => {
 
     return NextResponse.json({
       success: true,
-      data: { accountantEmail: tenant.accountantEmail },
+      data: {
+        accountantEmail: tenant.accountantEmail,
+        telegramChatId: tenant.telegramChatId,
+      },
     });
   } catch (err) {
     console.error('[GET /api/tenants/settings] error:', err);
@@ -47,27 +50,48 @@ export const GET = requireRole('admin')(async (req: AuthenticatedRequest) => {
 export const PUT = requireRole('admin')(async (req: AuthenticatedRequest) => {
   try {
     const tenantId = getTenantId(req);
-    const body = (await req.json()) as { accountantEmail?: unknown };
+    const body = (await req.json()) as {
+      accountantEmail?: unknown;
+      telegramChatId?: unknown;
+    };
 
-    const raw = body.accountantEmail;
-    let accountantEmail: string | null = null;
+    const updateData: { accountantEmail?: string | null; telegramChatId?: string | null } = {};
 
-    if (typeof raw === 'string' && raw.trim() !== '') {
-      const trimmed = raw.trim().toLowerCase();
-      if (!EMAIL_RE.test(trimmed)) {
-        return NextResponse.json(
-          { success: false, error: 'Invalid email address.' },
-          { status: 400 },
-        );
+    // Validate accountant email if provided.
+    if (body.accountantEmail !== undefined) {
+      const raw = body.accountantEmail;
+      if (typeof raw === 'string' && raw.trim() !== '') {
+        const trimmed = raw.trim().toLowerCase();
+        if (!EMAIL_RE.test(trimmed)) {
+          return NextResponse.json(
+            { success: false, error: 'Invalid email address.' },
+            { status: 400 },
+          );
+        }
+        updateData.accountantEmail = trimmed;
+      } else {
+        updateData.accountantEmail = null;
       }
-      accountantEmail = trimmed;
     }
 
-    const updated = await updateTenant(tenantId, { accountantEmail });
+    // Validate telegram chat ID if provided.
+    if (body.telegramChatId !== undefined) {
+      const raw = body.telegramChatId;
+      if (typeof raw === 'string' && raw.trim() !== '') {
+        updateData.telegramChatId = raw.trim();
+      } else {
+        updateData.telegramChatId = null;
+      }
+    }
+
+    const updated = await updateTenant(tenantId, updateData);
 
     return NextResponse.json({
       success: true,
-      data: { accountantEmail: updated?.accountantEmail ?? null },
+      data: {
+        accountantEmail: updated?.accountantEmail ?? null,
+        telegramChatId: updated?.telegramChatId ?? null,
+      },
     });
   } catch (err) {
     console.error('[PUT /api/tenants/settings] error:', err);
