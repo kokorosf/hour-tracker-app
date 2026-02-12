@@ -24,9 +24,59 @@ import type { Tenant } from '@hour-tracker/types';
 
 export async function getTenantById(id: string): Promise<Tenant | null> {
   const rows = await query<Tenant & import('pg').QueryResultRow>({
-    sql: 'SELECT id, name, plan, created_at as "createdAt", updated_at as "updatedAt" FROM tenants WHERE id = $1',
+    sql: `SELECT id, name, plan,
+            accountant_email AS "accountantEmail",
+            created_at AS "createdAt",
+            updated_at AS "updatedAt"
+          FROM tenants WHERE id = $1`,
     params: [id],
   });
 
   return rows[0] ?? null;
+}
+
+export async function updateTenant(
+  id: string,
+  data: { accountantEmail?: string | null },
+): Promise<Tenant | null> {
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  let idx = 1;
+
+  if (data.accountantEmail !== undefined) {
+    sets.push(`accountant_email = $${idx}`);
+    values.push(data.accountantEmail);
+    idx++;
+  }
+
+  if (sets.length === 0) return getTenantById(id);
+
+  sets.push(`updated_at = now()`);
+  values.push(id);
+
+  const sql = `UPDATE tenants SET ${sets.join(', ')} WHERE id = $${idx}
+               RETURNING id, name, plan,
+                 accountant_email AS "accountantEmail",
+                 created_at AS "createdAt",
+                 updated_at AS "updatedAt"`;
+
+  const rows = await query<Tenant & import('pg').QueryResultRow>({
+    sql,
+    params: values,
+  });
+
+  return rows[0] ?? null;
+}
+
+export async function getTenantsWithAccountantEmail(): Promise<Tenant[]> {
+  const rows = await query<Tenant & import('pg').QueryResultRow>({
+    sql: `SELECT id, name, plan,
+            accountant_email AS "accountantEmail",
+            created_at AS "createdAt",
+            updated_at AS "updatedAt"
+          FROM tenants
+          WHERE accountant_email IS NOT NULL AND accountant_email != ''`,
+  });
+
+  return rows;
 }

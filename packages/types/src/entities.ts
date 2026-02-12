@@ -10,6 +10,8 @@ export interface Tenant {
   name: string;
   /** Subscription plan – defaults to `'free'`. */
   plan: string;
+  /** Email address of the tenant's accountant for monthly reports. */
+  accountantEmail: string | null;
   /** Row creation timestamp. */
   createdAt: Date;
   /** Row last-update timestamp. */
@@ -138,6 +140,8 @@ export interface UpdateTenantDto {
   name?: string;
   /** Subscription plan. */
   plan?: string;
+  /** Accountant email for monthly reports. */
+  accountantEmail?: string | null;
 }
 
 /** Fields required to create a new user (includes plain-text password). */

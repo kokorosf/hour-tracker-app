@@ -1,12 +1,12 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import useSWR from 'swr';
 import { api } from '@/lib/api/client';
 import { useToast } from '@/../components/ui/toast';
 import Button from '@/../components/ui/button';
 import Input from '@/../components/ui/input';
-import { User, Lock, Building2 } from 'lucide-react';
+import { User, Lock, Building2, Mail } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -17,6 +17,10 @@ interface CurrentUser {
   email: string;
   tenantId: string;
   role: 'admin' | 'user';
+}
+
+interface TenantSettings {
+  accountantEmail: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -42,6 +46,22 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
+
+  // Accountant email state (admin only).
+  const isAdmin = user?.role === 'admin';
+  const { data: tenantSettings } = useSWR<TenantSettings>(
+    isAdmin ? '/api/tenants/settings' : null,
+    fetcher,
+    { revalidateOnFocus: false },
+  );
+  const [accountantEmail, setAccountantEmail] = useState('');
+  const [savingAccountantEmail, setSavingAccountantEmail] = useState(false);
+
+  useEffect(() => {
+    if (tenantSettings?.accountantEmail) {
+      setAccountantEmail(tenantSettings.accountantEmail);
+    }
+  }, [tenantSettings]);
 
   const handlePasswordChange = useCallback(
     async (e: React.FormEvent) => {
@@ -72,6 +92,25 @@ export default function SettingsPage() {
       }
     },
     [currentPassword, newPassword, confirmPassword, showToast],
+  );
+
+  const handleAccountantEmailSave = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setSavingAccountantEmail(true);
+      try {
+        await api.put('/api/tenants/settings', {
+          accountantEmail: accountantEmail.trim() || null,
+        });
+        showToast('Accountant email saved.', 'success');
+      } catch (err) {
+        const message = (err as Error).message || 'Failed to save accountant email.';
+        showToast(message, 'error');
+      } finally {
+        setSavingAccountantEmail(false);
+      }
+    },
+    [accountantEmail, showToast],
   );
 
   // ---------------------------------------------------------------------------
@@ -145,7 +184,7 @@ export default function SettingsPage() {
                   label="Current password"
                   type="password"
                   value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  onChange={(val) => setCurrentPassword(val)}
                   required
                   disabled={changingPassword}
                 />
@@ -153,7 +192,7 @@ export default function SettingsPage() {
                   label="New password"
                   type="password"
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
+                  onChange={(val) => setNewPassword(val)}
                   required
                   disabled={changingPassword}
                 />
@@ -161,7 +200,7 @@ export default function SettingsPage() {
                   label="Confirm new password"
                   type="password"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(val) => setConfirmPassword(val)}
                   required
                   disabled={changingPassword}
                   error={passwordError || undefined}
@@ -175,6 +214,37 @@ export default function SettingsPage() {
               </div>
             </form>
           </div>
+
+          {/* Accountant reports section (admin only) */}
+          {isAdmin && (
+            <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+              <div className="border-b border-gray-200 px-6 py-4">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-5 w-5 text-gray-500" />
+                  <h2 className="text-lg font-semibold text-gray-900">Accountant Reports</h2>
+                </div>
+              </div>
+              <form onSubmit={handleAccountantEmailSave} className="px-6 py-5">
+                <div className="max-w-md space-y-4">
+                  <Input
+                    label="Accountant Email"
+                    type="email"
+                    value={accountantEmail}
+                    onChange={(val) => setAccountantEmail(val)}
+                    placeholder="accountant@example.com"
+                    disabled={savingAccountantEmail}
+                  />
+                  <p className="text-xs text-gray-500">
+                    A monthly PDF report of all employee hours will be sent to this
+                    email on the 1st of each month. Leave blank to disable.
+                  </p>
+                  <Button type="submit" loading={savingAccountantEmail} size="sm">
+                    Save
+                  </Button>
+                </div>
+              </form>
+            </div>
+          )}
 
           {/* About section */}
           <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
