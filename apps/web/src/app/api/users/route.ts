@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { genSalt, hash } from 'bcryptjs';
-import { UserRepository } from '@hour-tracker/database';
+import { UserRepository, getPool } from '@hour-tracker/database';
 import {
   requireAuth,
   requireRole,
   getTenantId,
   type AuthenticatedRequest,
 } from '@/lib/auth/middleware';
+import { sendInvitation } from '@/lib/email/service';
 
 const userRepo = new UserRepository();
 
@@ -59,8 +60,8 @@ export const GET = requireRole('admin')(async (req: AuthenticatedRequest) => {
  * Invite (create) a new user in the same tenant. Requires admin role.
  * Body: { email: string, role: 'admin' | 'user' }
  *
- * Creates the user with a random temporary password. In a production app
- * this would send an email invitation; here we create the account directly.
+ * Creates the user with a random temporary password, generates an invite
+ * token, and sends an invitation email with a link to set their password.
  */
 export const POST = requireRole('admin')(async (req: AuthenticatedRequest) => {
   try {
@@ -102,19 +103,38 @@ export const POST = requireRole('admin')(async (req: AuthenticatedRequest) => {
     const salt = await genSalt(10);
     const passwordHash = await hash(tempPassword, salt);
 
-    // The BaseRepository.create doesn't handle password_hash directly.
-    // Insert manually so we can include the password_hash column.
-    const { getPool } = await import('@hour-tracker/database');
-    const id = crypto.randomUUID();
+    const pool = getPool();
+    const userId = crypto.randomUUID();
     const now = new Date();
 
-    const sql = `
+    const userSql = `
       INSERT INTO users (id, tenant_id, email, password_hash, role, created_at, updated_at)
       VALUES ($1, $2, $3, $4, $5, $6, $6)
       RETURNING id, tenant_id, email, role, created_at, updated_at
     `;
-    const { rows } = await getPool().query(sql, [id, tenantId, email, passwordHash, role, now]);
+    const { rows } = await pool.query(userSql, [userId, tenantId, email, passwordHash, role, now]);
     const user = rows[0];
+
+    // --- Generate invite token ---
+    const token = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    await pool.query(
+      `INSERT INTO invite_tokens (user_id, tenant_id, token, expires_at)
+       VALUES ($1, $2, $3, $4)`,
+      [userId, tenantId, token, expiresAt],
+    );
+
+    // --- Build invite link ---
+    const baseUrl = process.env.AUTH_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const inviteLink = `${baseUrl}/invite/${token}`;
+
+    // --- Send invitation email (best-effort) ---
+    try {
+      await sendInvitation(email, req.user.email, '', inviteLink);
+    } catch (emailErr) {
+      console.warn('[POST /api/users] email send failed (invite link still valid):', emailErr);
+    }
 
     return NextResponse.json(
       {
@@ -126,6 +146,7 @@ export const POST = requireRole('admin')(async (req: AuthenticatedRequest) => {
           role: user.role,
           createdAt: user.created_at,
           updatedAt: user.updated_at,
+          inviteLink,
         },
       },
       { status: 201 },

@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import Modal from '@/../components/ui/modal';
 import Input from '@/../components/ui/input';
 import Button from '@/../components/ui/button';
 import { useToast } from '@/../components/ui/toast';
 import { api } from '@/lib/api/client';
+import { Copy, Check } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -23,6 +24,13 @@ interface FormValues {
   role: 'admin' | 'user';
 }
 
+interface InviteResponse {
+  id: string;
+  email: string;
+  role: string;
+  inviteLink: string;
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -30,6 +38,8 @@ interface FormValues {
 export default function InviteUserForm({ isOpen, onClose, onSuccess }: InviteUserFormProps) {
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
+  const [inviteLink, setInviteLink] = useState('');
+  const [copied, setCopied] = useState(false);
 
   const {
     control,
@@ -43,6 +53,8 @@ export default function InviteUserForm({ isOpen, onClose, onSuccess }: InviteUse
   useEffect(() => {
     if (isOpen) {
       reset({ email: '', role: 'user' });
+      setInviteLink('');
+      setCopied(false);
     }
   }, [isOpen, reset]);
 
@@ -50,13 +62,13 @@ export default function InviteUserForm({ isOpen, onClose, onSuccess }: InviteUse
     setSubmitting(true);
 
     try {
-      await api.post('/api/users', {
+      const result = await api.post<InviteResponse>('/api/users', {
         email: data.email.trim().toLowerCase(),
         role: data.role,
       });
-      showToast('Invitation sent successfully.', 'success');
+      showToast('User invited successfully.', 'success');
+      setInviteLink(result.inviteLink);
       onSuccess();
-      onClose();
     } catch (err) {
       const message = (err as Error).message || 'Failed to invite user.';
       setError('email', { message });
@@ -65,6 +77,76 @@ export default function InviteUserForm({ isOpen, onClose, onSuccess }: InviteUse
       setSubmitting(false);
     }
   };
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setCopied(true);
+      showToast('Link copied to clipboard.', 'success');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      showToast('Failed to copy.', 'error');
+    }
+  }, [inviteLink, showToast]);
+
+  const handleClose = useCallback(() => {
+    setInviteLink('');
+    onClose();
+  }, [onClose]);
+
+  // -----------------------------------------------------------------------
+  // Invite link view (after successful invite)
+  // -----------------------------------------------------------------------
+
+  if (inviteLink) {
+    return (
+      <Modal
+        isOpen={isOpen}
+        onClose={handleClose}
+        title="Invitation Created"
+        footer={
+          <div className="flex justify-end">
+            <Button onClick={handleClose}>Done</Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Share this link with the invited user so they can set their password and
+            activate their account. The link expires in 7 days.
+          </p>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              readOnly
+              value={inviteLink}
+              className="min-w-0 flex-1 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700 font-mono"
+              onClick={(e) => (e.target as HTMLInputElement).select()}
+            />
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              {copied ? (
+                <Check className="h-4 w-4 text-green-600" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+          </div>
+          <p className="text-xs text-gray-500">
+            If you have SendGrid configured, an invitation email has also been sent.
+          </p>
+        </div>
+      </Modal>
+    );
+  }
+
+  // -----------------------------------------------------------------------
+  // Form view
+  // -----------------------------------------------------------------------
 
   return (
     <Modal
