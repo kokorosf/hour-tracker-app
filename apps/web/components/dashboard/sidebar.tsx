@@ -6,6 +6,7 @@ import {
   Home,
   Calendar,
   Users,
+  UserPlus,
   Briefcase,
   CheckSquare,
   BarChart3,
@@ -32,6 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Clients',    href: '/dashboard/clients',   icon: Users,      adminOnly: true },
   { label: 'Projects',   href: '/dashboard/projects',  icon: Briefcase,  adminOnly: true },
   { label: 'Tasks',      href: '/dashboard/tasks',     icon: CheckSquare, adminOnly: true },
+  { label: 'Users',      href: '/dashboard/users',     icon: UserPlus,    adminOnly: true },
   { label: 'Reports',    href: '/dashboard/reports',   icon: BarChart3   },
   { label: 'Settings',   href: '/dashboard/settings',  icon: Settings    },
 ];
