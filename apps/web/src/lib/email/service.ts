@@ -23,7 +23,7 @@ function loadTemplate(name: string): string {
   const cached = templateCache.get(name);
   if (cached) return cached;
 
-  const templatePath = join(__dirname, 'templates', `${name}.html`);
+  const templatePath = join(process.cwd(), 'src', 'lib', 'email', 'templates', `${name}.html`);
   const content = readFileSync(templatePath, 'utf-8');
   templateCache.set(name, content);
   return content;
