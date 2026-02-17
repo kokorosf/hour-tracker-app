@@ -4,11 +4,13 @@ import {
   ClientRepository,
   TaskRepository,
   transaction,
+  writeAuditLog,
 } from '@hour-tracker/database';
 import {
   requireAuth,
   requireRole,
   getTenantId,
+  getUserId,
   type AuthenticatedRequest,
 } from '@/lib/auth/middleware';
 import type { Project } from '@hour-tracker/types';
@@ -117,6 +119,16 @@ export const PUT = requireRole('admin')(async (req: AuthenticatedRequest, ctx: R
 
     const updated = await projectRepo.update(id, updates, tenantId);
 
+    writeAuditLog({
+      tenantId,
+      userId: getUserId(req),
+      action: 'update',
+      entityType: 'project',
+      entityId: id,
+      beforeData: existing as unknown as Record<string, unknown>,
+      afterData: updated as unknown as Record<string, unknown>,
+    });
+
     return NextResponse.json({ success: true, data: updated });
   } catch (err) {
     console.error('[PUT /api/projects/:id] error:', err);
@@ -163,6 +175,15 @@ export const DELETE = requireRole('admin')(async (req: AuthenticatedRequest, ctx
           WHERE id = $2 AND tenant_id = $3 AND deleted_at IS NULL`,
         [now, id, tenantId],
       );
+    });
+
+    writeAuditLog({
+      tenantId,
+      userId: getUserId(req),
+      action: 'delete',
+      entityType: 'project',
+      entityId: id,
+      beforeData: existing as unknown as Record<string, unknown>,
     });
 
     return new NextResponse(null, { status: 204 });

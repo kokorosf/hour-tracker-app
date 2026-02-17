@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { ClientRepository } from '@hour-tracker/database';
+import { ClientRepository, writeAuditLog } from '@hour-tracker/database';
 import {
   requireAuth,
   requireRole,
   getTenantId,
+  getUserId,
   type AuthenticatedRequest,
 } from '@/lib/auth/middleware';
 
@@ -75,6 +76,16 @@ export const PUT = requireRole('admin')(async (req: AuthenticatedRequest, ctx: R
       tenantId,
     );
 
+    writeAuditLog({
+      tenantId,
+      userId: getUserId(req),
+      action: 'update',
+      entityType: 'client',
+      entityId: id,
+      beforeData: existing as unknown as Record<string, unknown>,
+      afterData: updated as unknown as Record<string, unknown>,
+    });
+
     return NextResponse.json({ success: true, data: updated });
   } catch (err) {
     console.error('[PUT /api/clients/:id] error:', err);
@@ -106,6 +117,15 @@ export const DELETE = requireRole('admin')(async (req: AuthenticatedRequest, ctx
     }
 
     await clientRepo.softDelete(id, tenantId);
+
+    writeAuditLog({
+      tenantId,
+      userId: getUserId(req),
+      action: 'delete',
+      entityType: 'client',
+      entityId: id,
+      beforeData: existing as unknown as Record<string, unknown>,
+    });
 
     return new NextResponse(null, { status: 204 });
   } catch (err) {

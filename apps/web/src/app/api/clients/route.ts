@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { ClientRepository, query } from '@hour-tracker/database';
+import { ClientRepository, query, writeAuditLog } from '@hour-tracker/database';
 import {
   requireAuth,
   requireRole,
   getTenantId,
+  getUserId,
   type AuthenticatedRequest,
 } from '@/lib/auth/middleware';
 
@@ -93,6 +94,15 @@ export const POST = requireRole('admin')(async (req: AuthenticatedRequest) => {
     }
 
     const client = await clientRepo.create({ name } as Partial<import('@hour-tracker/types').Client>, tenantId);
+
+    writeAuditLog({
+      tenantId,
+      userId: getUserId(req),
+      action: 'create',
+      entityType: 'client',
+      entityId: client.id,
+      afterData: client as unknown as Record<string, unknown>,
+    });
 
     return NextResponse.json({ success: true, data: client }, { status: 201 });
   } catch (err) {

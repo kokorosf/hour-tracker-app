@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { TaskRepository, ProjectRepository, query } from '@hour-tracker/database';
+import { TaskRepository, ProjectRepository, query, writeAuditLog } from '@hour-tracker/database';
 import {
   requireAuth,
   requireRole,
   getTenantId,
+  getUserId,
   type AuthenticatedRequest,
 } from '@/lib/auth/middleware';
 import type { Task } from '@hour-tracker/types';
@@ -116,6 +117,15 @@ export const POST = requireRole('admin')(async (req: AuthenticatedRequest) => {
       { name, projectId } as Partial<Task>,
       tenantId,
     );
+
+    writeAuditLog({
+      tenantId,
+      userId: getUserId(req),
+      action: 'create',
+      entityType: 'task',
+      entityId: task.id,
+      afterData: task as unknown as Record<string, unknown>,
+    });
 
     return NextResponse.json({ success: true, data: task }, { status: 201 });
   } catch (err) {

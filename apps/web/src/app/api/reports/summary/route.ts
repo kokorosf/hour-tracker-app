@@ -72,7 +72,14 @@ export const GET = requireAuth(async (req: AuthenticatedRequest) => {
     }
 
     // Run all queries in parallel for performance
-    const queries = [
+    const [
+      totalsResult,
+      projectBreakdownResult,
+      dailyHoursResult,
+      activeProjectsResult,
+      pendingEntriesResult,
+      clientBreakdownResult,
+    ] = await Promise.all([
       // 1. Total and billable hours
       pool.query<{ total_minutes: string; billable_minutes: string }>(
         `SELECT
@@ -142,39 +149,45 @@ export const GET = requireAuth(async (req: AuthenticatedRequest) => {
            AND (te.description IS NULL OR te.description = '')${userCondition}`,
         baseParams,
       ),
-    ];
 
-    // 6. User breakdown (admin only, without user filter)
+      // 6. Client breakdown (hours aggregated at client level)
+      pool.query<{ client_id: string; client_name: string; total_minutes: string }>(
+        `SELECT
+           c.id AS client_id,
+           c.name AS client_name,
+           COALESCE(SUM(te.duration), 0)::bigint AS total_minutes
+         FROM time_entries te
+         JOIN projects p ON p.id = te.project_id
+         JOIN clients c ON c.id = p.client_id
+         WHERE te.tenant_id = $1
+           AND te.start_time >= $2
+           AND te.start_time < $3
+           AND te.deleted_at IS NULL${userCondition}
+         GROUP BY c.id, c.name
+         ORDER BY total_minutes DESC`,
+        baseParams,
+      ),
+    ]);
+
+    // 7. User breakdown (admin only, without user filter)
+    let userBreakdownResult: { rows: { user_id: string; user_email: string; total_minutes: string }[] } | null = null;
     if (userIsAdmin && !userIdFilter) {
-      queries.push(
-        pool.query<{ user_id: string; user_email: string; total_minutes: string }>(
-          `SELECT
-             te.user_id,
-             u.email AS user_email,
-             COALESCE(SUM(te.duration), 0)::bigint AS total_minutes
-           FROM time_entries te
-           JOIN users u ON u.id = te.user_id
-           WHERE te.tenant_id = $1
-             AND te.start_time >= $2
-             AND te.start_time < $3
-             AND te.deleted_at IS NULL
-           GROUP BY te.user_id, u.email
-           ORDER BY total_minutes DESC`,
-          [tenantId, startDate, endDate],
-        ),
+      userBreakdownResult = await pool.query<{ user_id: string; user_email: string; total_minutes: string }>(
+        `SELECT
+           te.user_id,
+           u.email AS user_email,
+           COALESCE(SUM(te.duration), 0)::bigint AS total_minutes
+         FROM time_entries te
+         JOIN users u ON u.id = te.user_id
+         WHERE te.tenant_id = $1
+           AND te.start_time >= $2
+           AND te.start_time < $3
+           AND te.deleted_at IS NULL
+         GROUP BY te.user_id, u.email
+         ORDER BY total_minutes DESC`,
+        [tenantId, startDate, endDate],
       );
     }
-
-    const results = await Promise.all(queries);
-
-    const [
-      totalsResult,
-      projectBreakdownResult,
-      dailyHoursResult,
-      activeProjectsResult,
-      pendingEntriesResult,
-      userBreakdownResult,
-    ] = results;
 
     const totalMinutes = Number(totalsResult.rows[0]?.total_minutes ?? 0);
     const billableMinutes = Number(totalsResult.rows[0]?.billable_minutes ?? 0);
@@ -203,6 +216,11 @@ export const GET = requireAuth(async (req: AuthenticatedRequest) => {
       })),
       dailyHours: dailyHoursResult.rows.map((row) => ({
         date: row.date,
+        hours: toHours(Number(row.total_minutes)),
+      })),
+      clientBreakdown: clientBreakdownResult.rows.map((row) => ({
+        clientId: row.client_id,
+        clientName: row.client_name,
         hours: toHours(Number(row.total_minutes)),
       })),
       // Legacy fields for backward compatibility with dashboard

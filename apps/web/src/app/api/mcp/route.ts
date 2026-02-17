@@ -5,6 +5,7 @@ import {
   TaskRepository,
   TimeEntryRepository,
   UserRepository,
+  writeAuditLog,
 } from '@hour-tracker/database';
 import {
   requireAuth,
@@ -285,6 +286,228 @@ async function getUserStatus(
   });
 }
 
+async function getTimeEntries(
+  tenantId: string,
+  userId: string,
+  params: Record<string, unknown>,
+): Promise<NextResponse> {
+  const startDateStr =
+    typeof params.startDate === 'string' ? params.startDate : undefined;
+  const endDateStr =
+    typeof params.endDate === 'string' ? params.endDate : undefined;
+  const projectId =
+    typeof params.projectId === 'string' ? params.projectId : undefined;
+  const limit =
+    typeof params.limit === 'number'
+      ? Math.min(100, Math.max(1, params.limit))
+      : 20;
+  const offset =
+    typeof params.offset === 'number' ? Math.max(0, params.offset) : 0;
+
+  const startDate = startDateStr ? new Date(startDateStr) : undefined;
+  const endDate = endDateStr ? new Date(endDateStr) : undefined;
+
+  if (startDate && isNaN(startDate.getTime())) {
+    return NextResponse.json(
+      { success: false, error: 'startDate is not a valid date.' },
+      { status: 400 },
+    );
+  }
+  if (endDate && isNaN(endDate.getTime())) {
+    return NextResponse.json(
+      { success: false, error: 'endDate is not a valid date.' },
+      { status: 400 },
+    );
+  }
+
+  const items = await timeEntryRepo.findFiltered(tenantId, {
+    userId,
+    projectId,
+    startDate,
+    endDate,
+    limit,
+    offset,
+  });
+
+  return NextResponse.json({ success: true, data: items });
+}
+
+async function updateTimeEntry(
+  tenantId: string,
+  userId: string,
+  params: Record<string, unknown>,
+): Promise<NextResponse> {
+  const entryId =
+    typeof params.entryId === 'string' ? params.entryId.trim() : '';
+  if (!entryId) {
+    return NextResponse.json(
+      { success: false, error: 'entryId is required.' },
+      { status: 400 },
+    );
+  }
+
+  const existing = await timeEntryRepo.findById(entryId, tenantId);
+  if (!existing || existing.userId !== userId) {
+    return NextResponse.json(
+      { success: false, error: 'Time entry not found.' },
+      { status: 404 },
+    );
+  }
+
+  const updates: Partial<TimeEntry> = {};
+
+  if (params.projectId !== undefined) {
+    const projectId =
+      typeof params.projectId === 'string' ? params.projectId.trim() : '';
+    if (!projectId) {
+      return NextResponse.json(
+        { success: false, error: 'projectId must be a non-empty string.' },
+        { status: 400 },
+      );
+    }
+    const project = await projectRepo.findById(projectId, tenantId);
+    if (!project) {
+      return NextResponse.json(
+        { success: false, error: 'Project not found in this tenant.' },
+        { status: 404 },
+      );
+    }
+    updates.projectId = projectId;
+  }
+
+  if (params.taskId !== undefined) {
+    const taskId =
+      typeof params.taskId === 'string' ? params.taskId.trim() : '';
+    if (!taskId) {
+      return NextResponse.json(
+        { success: false, error: 'taskId must be a non-empty string.' },
+        { status: 400 },
+      );
+    }
+    const task = await taskRepo.findById(taskId, tenantId);
+    if (!task) {
+      return NextResponse.json(
+        { success: false, error: 'Task not found in this tenant.' },
+        { status: 404 },
+      );
+    }
+    updates.taskId = taskId;
+  }
+
+  if (params.description !== undefined) {
+    updates.description =
+      params.description === null
+        ? null
+        : typeof params.description === 'string'
+          ? params.description.trim() || null
+          : null;
+  }
+
+  if (params.startTime !== undefined) {
+    const d = new Date(params.startTime as string);
+    if (isNaN(d.getTime())) {
+      return NextResponse.json(
+        { success: false, error: 'startTime is not a valid date.' },
+        { status: 400 },
+      );
+    }
+    updates.startTime = d;
+  }
+
+  if (params.endTime !== undefined) {
+    const d = new Date(params.endTime as string);
+    if (isNaN(d.getTime())) {
+      return NextResponse.json(
+        { success: false, error: 'endTime is not a valid date.' },
+        { status: 400 },
+      );
+    }
+    updates.endTime = d;
+  }
+
+  // Recalculate duration if times changed.
+  const finalStart = updates.startTime ?? existing.startTime;
+  const finalEnd = updates.endTime ?? existing.endTime;
+
+  if (finalEnd <= finalStart) {
+    return NextResponse.json(
+      { success: false, error: 'endTime must be after startTime.' },
+      { status: 400 },
+    );
+  }
+
+  if (updates.startTime || updates.endTime) {
+    updates.duration = Math.round(
+      (finalEnd.getTime() - finalStart.getTime()) / 60_000,
+    );
+
+    // Overlap check (exclude self).
+    const overlapping = await timeEntryRepo.findOverlapping(
+      userId,
+      tenantId,
+      finalStart,
+      finalEnd,
+      entryId,
+    );
+    if (overlapping.length > 0) {
+      return NextResponse.json(
+        { success: false, error: 'This time entry overlaps with an existing entry.' },
+        { status: 409 },
+      );
+    }
+  }
+
+  const updated = await timeEntryRepo.update(entryId, updates, tenantId);
+
+  writeAuditLog({
+    tenantId,
+    userId,
+    action: 'update',
+    entityType: 'time_entry',
+    entityId: entryId,
+    beforeData: existing as unknown as Record<string, unknown>,
+    afterData: updated as unknown as Record<string, unknown>,
+  });
+
+  return NextResponse.json({ success: true, data: updated });
+}
+
+async function deleteTimeEntry(
+  tenantId: string,
+  userId: string,
+  params: Record<string, unknown>,
+): Promise<NextResponse> {
+  const entryId =
+    typeof params.entryId === 'string' ? params.entryId.trim() : '';
+  if (!entryId) {
+    return NextResponse.json(
+      { success: false, error: 'entryId is required.' },
+      { status: 400 },
+    );
+  }
+
+  const existing = await timeEntryRepo.findById(entryId, tenantId);
+  if (!existing || existing.userId !== userId) {
+    return NextResponse.json(
+      { success: false, error: 'Time entry not found.' },
+      { status: 404 },
+    );
+  }
+
+  await timeEntryRepo.softDelete(entryId, tenantId);
+
+  writeAuditLog({
+    tenantId,
+    userId,
+    action: 'delete',
+    entityType: 'time_entry',
+    entityId: entryId,
+    beforeData: existing as unknown as Record<string, unknown>,
+  });
+
+  return NextResponse.json({ success: true, message: 'Time entry deleted.' });
+}
+
 // ---------------------------------------------------------------------------
 // Route
 // ---------------------------------------------------------------------------
@@ -299,7 +522,8 @@ async function getUserStatus(
  *   - params: object — method-specific parameters
  *
  * Supported methods:
- *   query_clients, query_projects, query_tasks, log_time_entry, get_user_status
+ *   query_clients, query_projects, query_tasks, log_time_entry,
+ *   get_user_status, get_time_entries, update_time_entry, delete_time_entry
  */
 export const POST = requireAuth(async (req: AuthenticatedRequest) => {
   try {
@@ -332,11 +556,20 @@ export const POST = requireAuth(async (req: AuthenticatedRequest) => {
       case 'get_user_status':
         return getUserStatus(tenantId, userId);
 
+      case 'get_time_entries':
+        return getTimeEntries(tenantId, userId, params);
+
+      case 'update_time_entry':
+        return updateTimeEntry(tenantId, userId, params);
+
+      case 'delete_time_entry':
+        return deleteTimeEntry(tenantId, userId, params);
+
       default:
         return NextResponse.json(
           {
             success: false,
-            error: `Unknown method "${method}". Supported: query_clients, query_projects, query_tasks, log_time_entry, get_user_status`,
+            error: `Unknown method "${method}". Supported: query_clients, query_projects, query_tasks, log_time_entry, get_user_status, get_time_entries, update_time_entry, delete_time_entry`,
           },
           { status: 400 },
         );

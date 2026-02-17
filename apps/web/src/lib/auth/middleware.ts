@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { decode } from 'next-auth/jwt';
 import type { ExtendedUser } from '@hour-tracker/types';
+import { createRateLimiter, getClientIp } from '@/lib/rate-limit';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -86,6 +87,17 @@ async function decodeToken(req: NextRequest): Promise<ExtendedUser | null> {
 }
 
 // ---------------------------------------------------------------------------
+// General API rate limiter
+// ---------------------------------------------------------------------------
+
+/**
+ * Rate limiter applied to all authenticated API endpoints.
+ * 100 requests per 60 seconds per IP — generous enough for normal use but
+ * protects against abuse.
+ */
+const apiRateLimiter = createRateLimiter({ limit: 100, windowSeconds: 60 });
+
+// ---------------------------------------------------------------------------
 // Middleware wrappers
 // ---------------------------------------------------------------------------
 
@@ -94,6 +106,9 @@ async function decodeToken(req: NextRequest): Promise<ExtendedUser | null> {
  * valid JWT in the `Authorization: Bearer <token>` header.
  *
  * The decoded user is attached to the request as `req.user`.
+ *
+ * A general rate limit (100 req/min per IP) is applied to all routes
+ * wrapped with this middleware.
  *
  * ```ts
  * export const GET = requireAuth(async (req) => {
@@ -107,6 +122,10 @@ export function requireAuth(handler: AuthenticatedHandler) {
     req: NextRequest,
     ctx: { params: Promise<Record<string, string>> },
   ): Promise<NextResponse> => {
+    // Apply general rate limiting before authentication.
+    const blocked = apiRateLimiter.check(getClientIp(req));
+    if (blocked) return blocked;
+
     const user = await decodeToken(req);
 
     if (!user) {

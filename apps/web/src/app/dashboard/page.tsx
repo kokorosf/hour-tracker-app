@@ -46,6 +46,11 @@ interface SummaryData {
     date: string;
     hours: number;
   }[];
+  clientBreakdown: {
+    clientId: string;
+    clientName: string;
+    hours: number;
+  }[];
   userBreakdown?: {
     userId: string;
     userName: string;
@@ -133,6 +138,7 @@ function formatDateForInput(date: Date): string {
 
 const PIE_COLORS = ['#3b82f6', '#94a3b8']; // blue-500, slate-400
 const BAR_COLOR = '#8b5cf6'; // violet-500
+const CLIENT_BAR_COLOR = '#f59e0b'; // amber-500
 const LINE_COLOR = '#10b981'; // emerald-500
 
 // ---------------------------------------------------------------------------
@@ -204,6 +210,15 @@ export default function DashboardPage() {
     return data.dailyHours.map((d) => ({
       date: new Date(d.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
       hours: d.hours,
+    }));
+  }, [data]);
+
+  const clientBarData = useMemo(() => {
+    if (!data?.clientBreakdown) return [];
+    return data.clientBreakdown.slice(0, 10).map((c) => ({
+      name: c.clientName.length > 15 ? c.clientName.slice(0, 15) + '...' : c.clientName,
+      fullName: c.clientName,
+      hours: c.hours,
     }));
   }, [data]);
 
@@ -436,6 +451,32 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
+
+          {/* Bar chart: Hours by Client */}
+          {clientBarData.length > 0 && (
+            <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+              <h2 className="mb-4 text-lg font-semibold text-gray-900">Hours by Client</h2>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={clientBarData} layout="vertical" margin={{ left: 20, right: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal vertical={false} />
+                  <XAxis type="number" tickFormatter={(v) => `${v}h`} />
+                  <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} />
+                  <Tooltip
+                    formatter={(value: number, name: string, props: { payload: { fullName: string } }) => [
+                      `${value}h`,
+                      props.payload.fullName,
+                    ]}
+                    contentStyle={{
+                      backgroundColor: 'white',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '0.5rem',
+                    }}
+                  />
+                  <Bar dataKey="hours" fill={CLIENT_BAR_COLOR} radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
 
           {/* Line chart: Hours per day */}
           <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
