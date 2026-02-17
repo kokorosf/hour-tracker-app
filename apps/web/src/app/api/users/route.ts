@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { genSalt, hash } from 'bcryptjs';
-import { UserRepository, getPool } from '@hour-tracker/database';
+import { UserRepository, getPool, getTenantById } from '@hour-tracker/database';
 import {
   requireAuth,
   requireRole,
@@ -8,6 +8,7 @@ import {
   type AuthenticatedRequest,
 } from '@/lib/auth/middleware';
 import { sendInvitation } from '@/lib/email/service';
+import { generateRequestId } from '@/lib/request-id';
 
 const userRepo = new UserRepository();
 
@@ -46,9 +47,10 @@ export const GET = requireRole('admin')(async (req: AuthenticatedRequest) => {
       },
     });
   } catch (err) {
-    console.error('[GET /api/users] error:', err);
+    const requestId = generateRequestId();
+    console.error(`[GET /api/users] error (${requestId}):`, err);
     return NextResponse.json(
-      { success: false, error: 'Internal server error.' },
+      { success: false, error: 'Internal server error.', requestId },
       { status: 500 },
     );
   }
@@ -130,8 +132,10 @@ export const POST = requireRole('admin')(async (req: AuthenticatedRequest) => {
     const inviteLink = `${baseUrl}/invite/${token}`;
 
     // --- Send invitation email (best-effort) ---
+    const tenant = await getTenantById(tenantId);
+    const tenantName = tenant?.name ?? 'Hour Tracker';
     try {
-      await sendInvitation(email, req.user.email, '', inviteLink);
+      await sendInvitation(email, req.user.email, tenantName, inviteLink);
     } catch (emailErr) {
       console.warn('[POST /api/users] email send failed (invite link still valid):', emailErr);
     }
@@ -152,9 +156,10 @@ export const POST = requireRole('admin')(async (req: AuthenticatedRequest) => {
       { status: 201 },
     );
   } catch (err) {
-    console.error('[POST /api/users] error:', err);
+    const requestId = generateRequestId();
+    console.error(`[POST /api/users] error (${requestId}):`, err);
     return NextResponse.json(
-      { success: false, error: 'Internal server error.' },
+      { success: false, error: 'Internal server error.', requestId },
       { status: 500 },
     );
   }

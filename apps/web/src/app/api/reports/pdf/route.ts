@@ -251,8 +251,9 @@ export const POST = requireAuth(async (req: AuthenticatedRequest) => {
     });
 
     // -- Totals row after table --
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const finalY = (doc as any).lastAutoTable?.finalY ?? tableStartY + 20;
+    const finalY =
+      (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable
+        ?.finalY ?? tableStartY + 20;
 
     doc.setFillColor(240, 242, 245);
     doc.rect(14, finalY + 2, pageWidth - 28, 10, 'F');

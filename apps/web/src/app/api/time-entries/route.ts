@@ -3,7 +3,9 @@ import {
   TimeEntryRepository,
   ProjectRepository,
   TaskRepository,
+  writeAuditLog,
 } from '@hour-tracker/database';
+import { generateRequestId } from '@/lib/request-id';
 import {
   requireAuth,
   getTenantId,
@@ -155,9 +157,10 @@ export const GET = requireAuth(async (req: AuthenticatedRequest) => {
       },
     });
   } catch (err) {
-    console.error('[GET /api/time-entries] error:', err);
+    const requestId = generateRequestId();
+    console.error(`[GET /api/time-entries] error (${requestId}):`, err);
     return NextResponse.json(
-      { success: false, error: 'Internal server error.' },
+      { success: false, error: 'Internal server error.', requestId },
       { status: 500 },
     );
   }
@@ -190,16 +193,35 @@ export const POST = requireAuth(async (req: AuthenticatedRequest) => {
       );
     }
 
+    // --- Daily cap check (24 hours = 1440 minutes) ---
+    const existingMinutes = await timeEntryRepo.sumMinutesForDay(userId, tenantId, startTime);
+    if (existingMinutes + duration > 1440) {
+      return NextResponse.json(
+        { success: false, error: 'Adding this entry would exceed 24 hours for the day.' },
+        { status: 409 },
+      );
+    }
+
     const entry = await timeEntryRepo.create(
       { userId, projectId, taskId, startTime, endTime, duration, description } as Partial<TimeEntry>,
       tenantId,
     );
 
+    writeAuditLog({
+      tenantId,
+      userId,
+      action: 'create',
+      entityType: 'time_entry',
+      entityId: entry.id,
+      afterData: entry as unknown as Record<string, unknown>,
+    });
+
     return NextResponse.json({ success: true, data: entry }, { status: 201 });
   } catch (err) {
-    console.error('[POST /api/time-entries] error:', err);
+    const requestId = generateRequestId();
+    console.error(`[POST /api/time-entries] error (${requestId}):`, err);
     return NextResponse.json(
-      { success: false, error: 'Internal server error.' },
+      { success: false, error: 'Internal server error.', requestId },
       { status: 500 },
     );
   }

@@ -258,6 +258,41 @@ export class TimeEntryRepository extends BaseRepository<TimeEntry> {
     return rows.map((r: Record<string, unknown>) => rowToCamel<TimeEntry>(r));
   }
 
+  /**
+   * Sum the total logged minutes for a user on a specific calendar day.
+   * Optionally exclude a specific entry (for update checks).
+   */
+  async sumMinutesForDay(
+    userId: string,
+    tenantId: string,
+    date: Date,
+    excludeId?: string,
+  ): Promise<number> {
+    const dayStart = new Date(date);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(date);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    const params: unknown[] = [tenantId, userId, dayStart, dayEnd];
+    const conditions = [
+      'tenant_id = $1',
+      'user_id = $2',
+      'deleted_at IS NULL',
+      'start_time >= $3',
+      'start_time <= $4',
+    ];
+
+    if (excludeId) {
+      params.push(excludeId);
+      conditions.push(`id != $${params.length}`);
+    }
+
+    const sql = `SELECT COALESCE(SUM(duration), 0)::int AS total
+                 FROM time_entries WHERE ${conditions.join(' AND ')}`;
+    const { rows } = await getPool().query(sql, params);
+    return (rows[0] as { total: number }).total;
+  }
+
   // -----------------------------------------------------------------------
   // Original convenience queries
   // -----------------------------------------------------------------------

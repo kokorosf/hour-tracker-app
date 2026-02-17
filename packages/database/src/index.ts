@@ -18,6 +18,9 @@ export type {
 } from './repositories/time-entry.repository';
 export { UserRepository } from './repositories/user.repository';
 
+export { writeAuditLog } from './audit';
+export type { AuditEntry } from './audit';
+
 import { query } from './connection';
 
 import type { Tenant } from '@hour-tracker/types';

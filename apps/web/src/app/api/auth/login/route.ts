@@ -4,11 +4,15 @@ import { UserRepository } from '@hour-tracker/database';
 import type { ExtendedUser } from '@hour-tracker/types';
 import { encode } from 'next-auth/jwt';
 import { authConfig } from '@/lib/auth/config';
+import { createRateLimiter, getClientIp } from '@/lib/rate-limit';
 
 const userRepo = new UserRepository();
+const loginLimiter = createRateLimiter({ limit: 10, windowSeconds: 900 });
 
 export async function POST(request: Request) {
   try {
+    const blocked = loginLimiter.check(getClientIp(request));
+    if (blocked) return blocked;
     const body = (await request.json()) as { email?: unknown; password?: unknown };
 
     const email =

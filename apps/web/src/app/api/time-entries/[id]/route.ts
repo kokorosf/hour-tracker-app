@@ -3,6 +3,7 @@ import {
   TimeEntryRepository,
   ProjectRepository,
   TaskRepository,
+  writeAuditLog,
 } from '@hour-tracker/database';
 import {
   requireAuth,
@@ -12,6 +13,7 @@ import {
   type AuthenticatedRequest,
 } from '@/lib/auth/middleware';
 import type { TimeEntry } from '@hour-tracker/types';
+import { generateRequestId } from '@/lib/request-id';
 
 const timeEntryRepo = new TimeEntryRepository();
 const projectRepo = new ProjectRepository();
@@ -54,9 +56,10 @@ export const GET = requireAuth(async (req: AuthenticatedRequest, ctx: RouteCtx) 
 
     return NextResponse.json({ success: true, data: entry });
   } catch (err) {
-    console.error('[GET /api/time-entries/:id] error:', err);
+    const requestId = generateRequestId();
+    console.error(`[GET /api/time-entries/:id] error (${requestId}):`, err);
     return NextResponse.json(
-      { success: false, error: 'Internal server error.' },
+      { success: false, error: 'Internal server error.', requestId },
       { status: 500 },
     );
   }
@@ -200,11 +203,22 @@ export const PUT = requireAuth(async (req: AuthenticatedRequest, ctx: RouteCtx) 
 
     const updated = await timeEntryRepo.update(id, updates, tenantId);
 
+    writeAuditLog({
+      tenantId,
+      userId: getUserId(req),
+      action: 'update',
+      entityType: 'time_entry',
+      entityId: id,
+      beforeData: existing as unknown as Record<string, unknown>,
+      afterData: updated as unknown as Record<string, unknown>,
+    });
+
     return NextResponse.json({ success: true, data: updated });
   } catch (err) {
-    console.error('[PUT /api/time-entries/:id] error:', err);
+    const requestId = generateRequestId();
+    console.error(`[PUT /api/time-entries/:id] error (${requestId}):`, err);
     return NextResponse.json(
-      { success: false, error: 'Internal server error.' },
+      { success: false, error: 'Internal server error.', requestId },
       { status: 500 },
     );
   }
@@ -232,11 +246,21 @@ export const DELETE = requireAuth(async (req: AuthenticatedRequest, ctx: RouteCt
 
     await timeEntryRepo.softDelete(id, tenantId);
 
+    writeAuditLog({
+      tenantId,
+      userId: getUserId(req),
+      action: 'delete',
+      entityType: 'time_entry',
+      entityId: id,
+      beforeData: existing as unknown as Record<string, unknown>,
+    });
+
     return new NextResponse(null, { status: 204 });
   } catch (err) {
-    console.error('[DELETE /api/time-entries/:id] error:', err);
+    const requestId = generateRequestId();
+    console.error(`[DELETE /api/time-entries/:id] error (${requestId}):`, err);
     return NextResponse.json(
-      { success: false, error: 'Internal server error.' },
+      { success: false, error: 'Internal server error.', requestId },
       { status: 500 },
     );
   }
