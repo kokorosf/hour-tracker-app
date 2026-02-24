@@ -1,15 +1,31 @@
 // ---------------------------------------------------------------------------
-// Telegram message handler – takes a user message, calls Claude with tools,
-// and returns a text response.
+// Telegram message handler
+//
+// Architecture (per integration plan):
+//   1. telegram-webhook → receives update
+//   2. chat-router      → maps senderId → userId + tenantId
+//   3. intent-parser    → parses commands into action schemas
+//   4. action-executor  → calls existing Hour Tracker business logic
+//   5. response-renderer→ sends concise Telegram reply
+//
+// Natural-language messages still fall through to the Claude agentic loop.
 // ---------------------------------------------------------------------------
 
 import Anthropic from '@anthropic-ai/sdk';
 import { sendMessage, sendChatAction } from './client';
 import { TOOL_DEFINITIONS, executeTool } from './tools';
-import { getTenantByTelegramChatId } from '@hour-tracker/database';
+import { parseIntent } from './intent-parser';
+import { resolveChatContext, linkSender, type ChatContext } from './chat-router';
+import {
+  executeHours,
+  executeLog,
+  executeRecent,
+  executeStatus,
+} from './action-executor';
+import { renderResponse, renderHelp } from './response-renderer';
 
 // ---------------------------------------------------------------------------
-// Claude client
+// Claude client (for natural-language fallback)
 // ---------------------------------------------------------------------------
 
 function getAnthropicClient(): Anthropic {
@@ -17,10 +33,6 @@ function getAnthropicClient(): Anthropic {
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not configured.');
   return new Anthropic({ apiKey });
 }
-
-// ---------------------------------------------------------------------------
-// System prompt
-// ---------------------------------------------------------------------------
 
 function buildSystemPrompt(tenantName: string): string {
   const today = new Date().toISOString().split('T')[0];
@@ -39,26 +51,26 @@ function buildSystemPrompt(tenantName: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Handler
+// Main handler
 // ---------------------------------------------------------------------------
 
 const MAX_TOOL_ROUNDS = 10;
 
 /**
- * Handle a Telegram message:
- * 1. Look up tenant by chat ID.
- * 2. Show typing indicator.
- * 3. Call Claude with tools.
- * 4. Execute tool calls in a loop until Claude produces a final text.
- * 5. Send the response back to Telegram.
+ * Handle a Telegram message.
+ *
+ * Structured commands (/hours, /log, /recent, /status, /help, /link) are
+ * parsed and executed directly. All other text is forwarded to Claude.
  */
 export async function handleTelegramMessage(
   chatId: string,
+  senderId: string,
   messageText: string,
+  messageId: string,
 ): Promise<void> {
-  // Look up the tenant for this chat.
-  const tenant = await getTenantByTelegramChatId(chatId);
-  if (!tenant) {
+  // 1. Resolve chat context (tenant + user).
+  const ctx = await resolveChatContext(chatId, senderId);
+  if (!ctx) {
     await sendMessage(
       chatId,
       'This chat is not connected to any organisation. Please set up the Telegram integration in your Hour Tracker settings.',
@@ -67,81 +79,89 @@ export async function handleTelegramMessage(
     return;
   }
 
-  // Show typing.
+  // Show typing indicator.
   await sendChatAction(chatId);
 
-  const anthropic = getAnthropicClient();
-  const messages: Anthropic.MessageParam[] = [
-    { role: 'user', content: messageText },
-  ];
+  // 2. Parse the intent.
+  const intent = parseIntent(messageText);
 
   try {
-    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-      const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1024,
-        system: buildSystemPrompt(tenant.name),
-        tools: TOOL_DEFINITIONS,
-        messages,
-      });
-
-      // If Claude's response ends the conversation (no tool use), send text.
-      if (response.stop_reason === 'end_turn') {
-        const textBlocks = response.content.filter(
-          (b): b is Anthropic.TextBlock => b.type === 'text',
-        );
-        const text = textBlocks.map((b) => b.text).join('\n') || 'No response.';
-        await sendMessage(chatId, text, '');
+    switch (intent.type) {
+      // ------------------------------------------------------------------
+      // /help
+      // ------------------------------------------------------------------
+      case 'help': {
+        await sendMessage(chatId, renderHelp(), '');
         return;
       }
 
-      // Process tool calls.
-      if (response.stop_reason === 'tool_use') {
-        // Keep typing while processing tools.
-        await sendChatAction(chatId);
+      // ------------------------------------------------------------------
+      // /link <email>
+      // ------------------------------------------------------------------
+      case 'link': {
+        const result = await linkSender(chatId, senderId, intent.email);
+        if (typeof result === 'string') {
+          await sendMessage(chatId, result, '');
+        } else {
+          await sendMessage(
+            chatId,
+            `Linked! You are now logged in as ${result.email} (${result.role}).`,
+            '',
+          );
+        }
+        return;
+      }
 
-        // Add assistant message with all content blocks.
-        messages.push({ role: 'assistant', content: response.content });
+      // ------------------------------------------------------------------
+      // /hours today | /hours week
+      // ------------------------------------------------------------------
+      case 'hours': {
+        const result = await executeHours(intent, ctx);
+        await sendMessage(chatId, renderResponse(result), '');
+        return;
+      }
 
-        // Execute each tool call and collect results.
-        const toolResults: Anthropic.ToolResultBlockParam[] = [];
-        for (const block of response.content) {
-          if (block.type === 'tool_use') {
-            const result = await executeTool(
-              block.name,
-              block.input as Record<string, string>,
-              tenant.id,
-            );
-            toolResults.push({
-              type: 'tool_result',
-              tool_use_id: block.id,
-              content: JSON.stringify(result),
-            });
-          }
+      // ------------------------------------------------------------------
+      // /log <duration> project:... task:... note:...
+      // ------------------------------------------------------------------
+      case 'log': {
+        const result = await executeLog(intent, ctx, messageId);
+        await sendMessage(chatId, renderResponse(result), '');
+        return;
+      }
+
+      // ------------------------------------------------------------------
+      // /recent
+      // ------------------------------------------------------------------
+      case 'recent': {
+        const result = await executeRecent(intent, ctx);
+        await sendMessage(chatId, renderResponse(result), '');
+        return;
+      }
+
+      // ------------------------------------------------------------------
+      // /status
+      // ------------------------------------------------------------------
+      case 'status': {
+        const result = await executeStatus(intent, ctx);
+        await sendMessage(chatId, renderResponse(result), '');
+        return;
+      }
+
+      // ------------------------------------------------------------------
+      // Natural language → Claude
+      // ------------------------------------------------------------------
+      case 'natural_language': {
+        // Check for parse errors from intent-parser.
+        if (intent.text.startsWith('__PARSE_ERROR__')) {
+          await sendMessage(chatId, intent.text.replace('__PARSE_ERROR__', ''), '');
+          return;
         }
 
-        // Feed tool results back to Claude.
-        messages.push({ role: 'user', content: toolResults });
-        continue;
+        await handleWithClaude(chatId, intent.text, ctx);
+        return;
       }
-
-      // Unexpected stop reason — send whatever text we have.
-      const fallbackText = response.content
-        .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-        .map((b) => b.text)
-        .join('\n');
-      if (fallbackText) {
-        await sendMessage(chatId, fallbackText, '');
-      }
-      return;
     }
-
-    // If we hit the max rounds, let the user know.
-    await sendMessage(
-      chatId,
-      'Sorry, I took too many steps trying to answer that. Please try a simpler question.',
-      '',
-    );
   } catch (err) {
     console.error('[telegram/handler] error:', err);
     await sendMessage(
@@ -150,4 +170,80 @@ export async function handleTelegramMessage(
       '',
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Claude agentic loop (natural-language fallback)
+// ---------------------------------------------------------------------------
+
+async function handleWithClaude(
+  chatId: string,
+  text: string,
+  ctx: ChatContext,
+): Promise<void> {
+  const anthropic = getAnthropicClient();
+  const messages: Anthropic.MessageParam[] = [
+    { role: 'user', content: text },
+  ];
+
+  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      system: buildSystemPrompt(ctx.tenant.name),
+      tools: TOOL_DEFINITIONS,
+      messages,
+    });
+
+    // Final text response.
+    if (response.stop_reason === 'end_turn') {
+      const textBlocks = response.content.filter(
+        (b): b is Anthropic.TextBlock => b.type === 'text',
+      );
+      const reply = textBlocks.map((b) => b.text).join('\n') || 'No response.';
+      await sendMessage(chatId, reply, '');
+      return;
+    }
+
+    // Tool calls.
+    if (response.stop_reason === 'tool_use') {
+      await sendChatAction(chatId);
+      messages.push({ role: 'assistant', content: response.content });
+
+      const toolResults: Anthropic.ToolResultBlockParam[] = [];
+      for (const block of response.content) {
+        if (block.type === 'tool_use') {
+          const result = await executeTool(
+            block.name,
+            block.input as Record<string, string>,
+            ctx.tenant.id,
+          );
+          toolResults.push({
+            type: 'tool_result',
+            tool_use_id: block.id,
+            content: JSON.stringify(result),
+          });
+        }
+      }
+
+      messages.push({ role: 'user', content: toolResults });
+      continue;
+    }
+
+    // Unexpected stop reason.
+    const fallbackText = response.content
+      .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+      .map((b) => b.text)
+      .join('\n');
+    if (fallbackText) {
+      await sendMessage(chatId, fallbackText, '');
+    }
+    return;
+  }
+
+  await sendMessage(
+    chatId,
+    'Sorry, I took too many steps trying to answer that. Please try a simpler question.',
+    '',
+  );
 }

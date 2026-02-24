@@ -66,9 +66,25 @@ export class UserRepository {
   count = mockCount;
 }
 
+export const mockFindBySender = jest.fn();
+export const mockUpsert = jest.fn();
+export const mockTryMarkProcessed = jest.fn();
+
+export class ChatIdentityRepository {
+  findBySender = mockFindBySender;
+  upsert = mockUpsert;
+  delete = jest.fn();
+}
+
+export class ProcessedMessageRepository {
+  tryMarkProcessed = mockTryMarkProcessed;
+  cleanupOlderThan = jest.fn();
+}
+
 export const query = jest.fn();
 export const getPool = jest.fn();
 export const testConnection = jest.fn();
 export const transaction = jest.fn();
 export const getTenantById = jest.fn();
+export const getTenantByTelegramChatId = jest.fn();
 export const writeAuditLog = jest.fn();

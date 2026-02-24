@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handleTelegramMessage } from '@/lib/telegram/handler';
-import { getTenantByTelegramChatId } from '@hour-tracker/database';
+import {
+  getTenantByTelegramChatId,
+  ProcessedMessageRepository,
+} from '@hour-tracker/database';
+import { createRateLimiter } from '@/lib/rate-limit';
 
 // ---------------------------------------------------------------------------
 // Telegram Update type (subset we care about)
@@ -17,6 +21,17 @@ interface TelegramUpdate {
 }
 
 // ---------------------------------------------------------------------------
+// Idempotency & rate limiting
+// ---------------------------------------------------------------------------
+
+const processedMessageRepo = new ProcessedMessageRepository();
+
+// Per-sender: 30 messages per 60 seconds.
+const senderLimiter = createRateLimiter({ limit: 30, windowSeconds: 60 });
+// Per-tenant (chat): 120 messages per 60 seconds.
+const tenantLimiter = createRateLimiter({ limit: 120, windowSeconds: 60 });
+
+// ---------------------------------------------------------------------------
 // Route
 // ---------------------------------------------------------------------------
 
@@ -27,6 +42,8 @@ interface TelegramUpdate {
  * Telegram calls it directly. Security relies on:
  *   1. Only messages from a registered `telegram_chat_id` are processed.
  *   2. Unregistered chats receive a generic "not connected" message.
+ *   3. Idempotency: duplicate Telegram retries are detected via update_id.
+ *   4. Rate limiting: per-sender and per-tenant limits prevent abuse.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -38,13 +55,37 @@ export async function POST(req: NextRequest) {
     }
 
     const chatId = String(update.message.chat.id);
+    const senderId = String(update.message.from?.id ?? 'unknown');
+    const messageId = String(update.message.message_id);
     const text = update.message.text;
 
-    // Skip bot commands we don't handle (e.g. /start from unconnected users).
+    // --- Rate limiting ---
+    const senderBlocked = senderLimiter.check(`tg:sender:${senderId}`);
+    if (senderBlocked) {
+      // Silently drop — don't send error to avoid feedback loops.
+      return NextResponse.json({ ok: true });
+    }
+    const tenantBlocked = tenantLimiter.check(`tg:chat:${chatId}`);
+    if (tenantBlocked) {
+      return NextResponse.json({ ok: true });
+    }
+
+    // --- Idempotency: skip already-processed updates ---
+    const updateKey = String(update.update_id);
+    const tenant = await getTenantByTelegramChatId(chatId);
+    const isNew = await processedMessageRepo.tryMarkProcessed(
+      'telegram',
+      updateKey,
+      tenant?.id ?? null,
+    );
+    if (!isNew) {
+      // Duplicate update — Telegram retry. Skip.
+      return NextResponse.json({ ok: true });
+    }
+
+    // --- /start for unconnected chats ---
     if (text === '/start') {
-      const tenant = await getTenantByTelegramChatId(chatId);
       if (!tenant) {
-        // Import sendMessage lazily to avoid issues if token isn't set.
         const { sendMessage } = await import('@/lib/telegram/client');
         await sendMessage(
           chatId,
@@ -55,11 +96,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Process the message asynchronously — respond to Telegram immediately
-    // to avoid timeout. The handler sends the reply via Telegram API.
-    // We use waitUntil-style: fire and don't await in production,
-    // but for correctness in dev we await.
-    await handleTelegramMessage(chatId, text);
+    // --- Process the message ---
+    await handleTelegramMessage(chatId, senderId, text, messageId);
 
     return NextResponse.json({ ok: true });
   } catch (err) {

@@ -18,6 +18,10 @@ export type {
 } from './repositories/time-entry.repository';
 export { UserRepository } from './repositories/user.repository';
 
+export { ChatIdentityRepository } from './repositories/chat-identity.repository';
+export type { ChatIdentityMapping } from './repositories/chat-identity.repository';
+export { ProcessedMessageRepository } from './repositories/processed-message.repository';
+
 export { writeAuditLog } from './audit';
 export type { AuditEntry } from './audit';
 
