@@ -117,7 +117,6 @@ export const POST = requireAuth(async (req: AuthenticatedRequest) => {
     const totalMinutes = entries.reduce((sum, e) => sum + e.duration, 0);
     const uniqueProjects = new Set(entries.map((e) => e.projectId)).size;
     const uniqueUsers = new Set(entries.map((e) => e.userId)).size;
-    const billableEntries = entries.length; // all entries returned
 
     const dateRange =
       startDate && endDate

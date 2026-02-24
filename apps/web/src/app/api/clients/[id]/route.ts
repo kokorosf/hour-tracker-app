@@ -10,7 +10,7 @@ import {
 
 const clientRepo = new ClientRepository();
 
-type RouteCtx = { params: Promise<{ id: string }> };
+type RouteCtx = { params: Promise<Record<string, string>> };
 
 /**
  * GET /api/clients/:id
@@ -21,7 +21,7 @@ type RouteCtx = { params: Promise<{ id: string }> };
 export const GET = requireAuth(async (req: AuthenticatedRequest, ctx: RouteCtx) => {
   try {
     const tenantId = getTenantId(req);
-    const { id } = await ctx.params;
+    const { id } = (await ctx.params) as { id: string };
 
     const client = await clientRepo.findById(id, tenantId);
     if (!client) {
@@ -49,7 +49,7 @@ export const GET = requireAuth(async (req: AuthenticatedRequest, ctx: RouteCtx) 
 export const PUT = requireRole('admin')(async (req: AuthenticatedRequest, ctx: RouteCtx) => {
   try {
     const tenantId = getTenantId(req);
-    const { id } = await ctx.params;
+    const { id } = (await ctx.params) as { id: string };
     const body = (await req.json()) as { name?: unknown };
 
     const name = typeof body.name === 'string' ? body.name.trim() : '';
@@ -105,7 +105,7 @@ export const PUT = requireRole('admin')(async (req: AuthenticatedRequest, ctx: R
 export const DELETE = requireRole('admin')(async (req: AuthenticatedRequest, ctx: RouteCtx) => {
   try {
     const tenantId = getTenantId(req);
-    const { id } = await ctx.params;
+    const { id } = (await ctx.params) as { id: string };
 
     // Verify the client exists and belongs to this tenant.
     const existing = await clientRepo.findById(id, tenantId);

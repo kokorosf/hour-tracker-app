@@ -81,13 +81,13 @@ export abstract class BaseRepository<T extends { id: string }> {
   /**
    * @param tableName   - PostgreSQL table name (snake_case).
    * @param columns     - All column names in the table (snake_case).
-   * @param softDelete  - Set to `false` for tables without a `deleted_at`
-   *                      column (e.g. `tenants`). Defaults to `true`.
+   * @param hasSoftDelete  - Set to `false` for tables without a `deleted_at`
+   *                         column (e.g. `tenants`). Defaults to `true`.
    */
   protected constructor(
     protected readonly tableName: string,
     protected readonly columns: string[],
-    protected readonly softDelete: boolean = true,
+    protected readonly hasSoftDelete: boolean = true,
   ) {}
 
   // -----------------------------------------------------------------------
@@ -115,7 +115,7 @@ export abstract class BaseRepository<T extends { id: string }> {
     const params: unknown[] = [tenantId];
     const conditions: string[] = ['tenant_id = $1'];
 
-    if (this.softDelete && !includeDeleted) {
+    if (this.hasSoftDelete && !includeDeleted) {
       conditions.push('deleted_at IS NULL');
     }
 
@@ -148,7 +148,7 @@ export abstract class BaseRepository<T extends { id: string }> {
    */
   async findById(id: string, tenantId: string): Promise<T | null> {
     const conditions = ['id = $1', 'tenant_id = $2'];
-    if (this.softDelete) {
+    if (this.hasSoftDelete) {
       conditions.push('deleted_at IS NULL');
     }
 
@@ -230,7 +230,7 @@ export abstract class BaseRepository<T extends { id: string }> {
     const tenantIdx = paramIdx;
 
     const conditions = [`id = $${idIdx}`, `tenant_id = $${tenantIdx}`];
-    if (this.softDelete) {
+    if (this.hasSoftDelete) {
       conditions.push('deleted_at IS NULL');
     }
 
@@ -255,7 +255,7 @@ export abstract class BaseRepository<T extends { id: string }> {
    * Has no effect if the table does not support soft-delete.
    */
   async softDelete(id: string, tenantId: string): Promise<void> {
-    if (!this.softDelete) {
+    if (!this.hasSoftDelete) {
       throw new Error(`${this.tableName} does not support soft-delete`);
     }
 

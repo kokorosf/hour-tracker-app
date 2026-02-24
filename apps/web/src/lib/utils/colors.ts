@@ -32,5 +32,5 @@ function hashString(str: string): number {
 
 export function getProjectColor(projectId: string): { bg: string; border: string } {
   const idx = hashString(projectId) % PROJECT_COLORS.length;
-  return PROJECT_COLORS[idx];
+  return PROJECT_COLORS[idx]!;
 }

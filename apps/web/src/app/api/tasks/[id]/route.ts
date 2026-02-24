@@ -12,7 +12,7 @@ import type { Task } from '@hour-tracker/types';
 const taskRepo = new TaskRepository();
 const projectRepo = new ProjectRepository();
 
-type RouteCtx = { params: Promise<{ id: string }> };
+type RouteCtx = { params: Promise<Record<string, string>> };
 
 /**
  * GET /api/tasks/:id
@@ -23,7 +23,7 @@ type RouteCtx = { params: Promise<{ id: string }> };
 export const GET = requireAuth(async (req: AuthenticatedRequest, ctx: RouteCtx) => {
   try {
     const tenantId = getTenantId(req);
-    const { id } = await ctx.params;
+    const { id } = (await ctx.params) as { id: string };
 
     const task = await taskRepo.findByIdWithProjectName(id, tenantId);
     if (!task) {
@@ -52,7 +52,7 @@ export const GET = requireAuth(async (req: AuthenticatedRequest, ctx: RouteCtx) 
 export const PUT = requireRole('admin')(async (req: AuthenticatedRequest, ctx: RouteCtx) => {
   try {
     const tenantId = getTenantId(req);
-    const { id } = await ctx.params;
+    const { id } = (await ctx.params) as { id: string };
     const body = (await req.json()) as {
       name?: unknown;
       projectId?: unknown;
@@ -131,7 +131,7 @@ export const PUT = requireRole('admin')(async (req: AuthenticatedRequest, ctx: R
 export const DELETE = requireRole('admin')(async (req: AuthenticatedRequest, ctx: RouteCtx) => {
   try {
     const tenantId = getTenantId(req);
-    const { id } = await ctx.params;
+    const { id } = (await ctx.params) as { id: string };
 
     // --- Verify task exists ---
     const existing = await taskRepo.findById(id, tenantId);

@@ -25,9 +25,8 @@ const config = {
   },
   setupFiles: ['<rootDir>/jest.polyfills.ts'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
-  testMatch: [
-    '<rootDir>/src/**/*.test.{ts,tsx}',
-    '<rootDir>/components/**/*.test.{ts,tsx}',
+  testRegex: [
+    '(src|components)/.*\\.test\\.tsx?$',
   ],
   coverageDirectory: 'coverage',
   collectCoverageFrom: [

@@ -61,12 +61,13 @@ export const authConfig: NextAuthConfig = {
     },
 
     async session({ session, token }) {
-      session.user = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (session as any).user = {
         id: token.userId as string,
         email: token.email as string,
         tenantId: token.tenantId as string,
         role: token.role as 'admin' | 'user',
-      };
+      } satisfies ExtendedUser;
       return session;
     },
   },
