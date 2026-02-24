@@ -2,7 +2,6 @@
   "permissions": {
     "allow": [
       "Bash(npm run build:*)",
-      "Bash(npm test)",
       "Bash(npm --workspace apps/web test)"
     ]
   }

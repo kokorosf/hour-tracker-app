@@ -8,7 +8,10 @@ import {
   UserRepository,
   ProjectRepository,
   ClientRepository,
+  TaskRepository,
+  writeAuditLog,
 } from '@hour-tracker/database';
+import { parseDuration } from './intent-parser';
 
 // ---------------------------------------------------------------------------
 // Repository instances
@@ -18,6 +21,7 @@ const timeEntryRepo = new TimeEntryRepository();
 const userRepo = new UserRepository();
 const projectRepo = new ProjectRepository();
 const clientRepo = new ClientRepository();
+const taskRepo = new TaskRepository();
 
 // ---------------------------------------------------------------------------
 // Tool definitions (sent to Claude)
@@ -110,6 +114,38 @@ export const TOOL_DEFINITIONS: Tool[] = [
       required: ['start_date', 'end_date'],
     },
   },
+  {
+    name: 'log_time',
+    description:
+      'Log a time entry for the currently linked user. ' +
+      'Resolves project and task by name (partial match). ' +
+      'Use this when the user asks to log time, e.g. "log 2 hours to Website/Bugfix" ' +
+      'or "I worked 30 minutes on the API task". ' +
+      'Returns the created entry on success, or an error if the project/task is ' +
+      'ambiguous, an overlap is detected, or the 24-hour daily cap would be exceeded.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        duration: {
+          type: 'string',
+          description: 'Duration string, e.g. "1h", "30m", "1h30m", "90" (minutes).',
+        },
+        project_name: {
+          type: 'string',
+          description: 'Project name or partial name to match.',
+        },
+        task_name: {
+          type: 'string',
+          description: 'Task name or partial name to match.',
+        },
+        note: {
+          type: 'string',
+          description: 'Optional description/note for the time entry.',
+        },
+      },
+      required: ['duration', 'project_name', 'task_name'],
+    },
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -121,6 +157,9 @@ interface ToolInput {
   project_name?: string;
   start_date?: string;
   end_date?: string;
+  duration?: string;
+  task_name?: string;
+  note?: string;
 }
 
 /**
@@ -130,6 +169,7 @@ export async function executeTool(
   name: string,
   input: ToolInput,
   tenantId: string,
+  userId?: string,
 ): Promise<unknown> {
   switch (name) {
     case 'get_user_hours':
@@ -142,6 +182,8 @@ export async function executeTool(
       return listProjects(tenantId);
     case 'get_summary':
       return getSummary(tenantId, input);
+    case 'log_time':
+      return logTime(tenantId, userId ?? '', input);
     default:
       return { error: `Unknown tool: ${name}` };
   }
@@ -322,5 +364,132 @@ async function getSummary(tenantId: string, input: ToolInput) {
     uniqueProjects: projectSummaries.length,
     perUser,
     topProjects,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// log_time – Claude write tool
+// ---------------------------------------------------------------------------
+
+function formatDurationStr(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h > 0 && m > 0) return `${h}h ${m}m`;
+  if (h > 0) return `${h}h`;
+  return `${m}m`;
+}
+
+async function logTime(tenantId: string, userId: string, input: ToolInput) {
+  if (!userId) {
+    return { error: 'User is not linked. Use /link your@email.com first.' };
+  }
+
+  // --- Parse duration ---
+  const durationMinutes = parseDuration(input.duration ?? '');
+  if (durationMinutes === null || durationMinutes <= 0) {
+    return {
+      error: `Could not parse duration "${input.duration}". Use "1h", "30m", "1h30m", or plain minutes.`,
+    };
+  }
+  if (durationMinutes > 1440) {
+    return { error: 'Duration cannot exceed 24 hours.' };
+  }
+
+  // --- Resolve project by partial name ---
+  const projects = await projectRepo.findWithClientName(tenantId);
+  const projectMatches = input.project_name
+    ? projects.filter((p) =>
+        p.name.toLowerCase().includes(input.project_name!.toLowerCase()),
+      )
+    : [];
+
+  if (projectMatches.length === 0) {
+    return {
+      error: `No project matching "${input.project_name}" found. Use list_projects to see available projects.`,
+    };
+  }
+  if (projectMatches.length > 1) {
+    return {
+      error: `Multiple projects match "${input.project_name}": ${projectMatches.map((p) => `"${p.name}"`).join(', ')}. Please be more specific.`,
+    };
+  }
+  const project = projectMatches[0]!;
+
+  // --- Resolve task by partial name ---
+  const tasks = await taskRepo.findByProject(project.id, tenantId);
+  const taskMatches = input.task_name
+    ? tasks.filter((t) =>
+        t.name.toLowerCase().includes(input.task_name!.toLowerCase()),
+      )
+    : [];
+
+  if (taskMatches.length === 0) {
+    return {
+      error: `No task matching "${input.task_name}" in project "${project.name}".`,
+    };
+  }
+  if (taskMatches.length > 1) {
+    return {
+      error: `Multiple tasks match "${input.task_name}": ${taskMatches.map((t) => `"${t.name}"`).join(', ')}. Please be more specific.`,
+    };
+  }
+  const task = taskMatches[0]!;
+
+  // --- Build time window ---
+  const now = new Date();
+  const startTime = new Date(now.getTime() - durationMinutes * 60_000);
+
+  // --- Overlap check ---
+  const overlapping = await timeEntryRepo.findOverlapping(
+    userId,
+    tenantId,
+    startTime,
+    now,
+  );
+  if (overlapping.length > 0) {
+    return { error: 'This time entry overlaps with an existing entry.' };
+  }
+
+  // --- Daily cap check ---
+  const existingMinutes = await timeEntryRepo.sumMinutesForDay(
+    userId,
+    tenantId,
+    startTime,
+  );
+  if (existingMinutes + durationMinutes > 1440) {
+    const remaining = 1440 - existingMinutes;
+    return {
+      error: `Adding this entry would exceed 24 hours for the day. ${formatDurationStr(remaining)} remaining today.`,
+    };
+  }
+
+  // --- Create entry ---
+  const entry = await timeEntryRepo.create(
+    {
+      userId,
+      projectId: project.id,
+      taskId: task.id,
+      startTime,
+      endTime: now,
+      duration: durationMinutes,
+      description: input.note ?? null,
+    } as Partial<import('@hour-tracker/types').TimeEntry>,
+    tenantId,
+  );
+
+  // Audit log (fire-and-forget).
+  writeAuditLog({
+    tenantId,
+    userId,
+    action: 'create',
+    entityType: 'time_entry',
+    entityId: entry.id,
+    afterData: { ...entry, _channel: 'telegram_claude' },
+  });
+
+  return {
+    success: true,
+    message: `Logged ${formatDurationStr(durationMinutes)} to ${project.clientName} / ${project.name} / ${task.name}.`,
+    entryId: entry.id,
   };
 }

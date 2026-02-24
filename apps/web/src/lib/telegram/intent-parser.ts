@@ -20,6 +20,10 @@ export interface LogIntent {
   project?: string;
   task?: string;
   note?: string;
+  /** Injected after disambiguation — skips fuzzy matching when present. */
+  resolvedClientId?: string;
+  resolvedProjectId?: string;
+  resolvedTaskId?: string;
 }
 
 export interface RecentIntent {
@@ -44,6 +48,11 @@ export interface NaturalLanguageIntent {
   text: string;
 }
 
+export interface ParseErrorIntent {
+  type: 'parse_error';
+  message: string;
+}
+
 export type ParsedIntent =
   | HoursIntent
   | LogIntent
@@ -51,7 +60,8 @@ export type ParsedIntent =
   | StatusIntent
   | HelpIntent
   | LinkIntent
-  | NaturalLanguageIntent;
+  | NaturalLanguageIntent
+  | ParseErrorIntent;
 
 // ---------------------------------------------------------------------------
 // Duration parser
@@ -171,9 +181,7 @@ export function parseIntent(text: string): ParsedIntent {
     const body = trimmed.replace(/^\/log\s+/i, '');
     const result = parseLogBody(body);
     if (typeof result === 'string') {
-      // Return as natural language so the handler can send the error.
-      // We embed the error in a special way – the handler checks for this.
-      return { type: 'natural_language', text: `__PARSE_ERROR__${result}` };
+      return { type: 'parse_error', message: result };
     }
     return { type: 'log', ...result };
   }

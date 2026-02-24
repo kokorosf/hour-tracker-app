@@ -86,8 +86,5 @@ export const getPool = jest.fn();
 export const testConnection = jest.fn();
 export const transaction = jest.fn();
 export const getTenantById = jest.fn();
-<<<<<<< HEAD
 export const getTenantByTelegramChatId = jest.fn();
-=======
->>>>>>> 2d1390fd28fc2664ecdfb72e03eda1d6190595a7
 export const writeAuditLog = jest.fn();

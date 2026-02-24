@@ -50,6 +50,10 @@ export interface DisambiguationResult {
   entity: 'client' | 'project' | 'task';
   matches: Array<{ name: string; id: string; extra?: string }>;
   message: string;
+  /** The original intent — used by the handler to resume after the user picks a number. */
+  pendingIntent: LogIntent;
+  /** The original Telegram message ID — preserved for the audit log. */
+  originalMessageId: string;
 }
 
 export interface RecentResult {
@@ -172,8 +176,8 @@ export async function executeLog(
   const tenantId = ctx.tenant.id;
 
   // --- Resolve client ---
-  let clientId: string | undefined;
-  if (intent.client) {
+  let clientId: string | undefined = intent.resolvedClientId;
+  if (!clientId && intent.client) {
     const clients = await clientRepo.findByTenant(tenantId);
     const matches = clients.filter((c) =>
       c.name.toLowerCase().includes(intent.client!.toLowerCase()),
@@ -187,6 +191,8 @@ export async function executeLog(
         entity: 'client',
         matches: matches.map((c) => ({ name: c.name, id: c.id })),
         message: `I found ${matches.length} matching clients. Reply with the number.`,
+        pendingIntent: intent,
+        originalMessageId: messageId,
       };
     }
     clientId = matches[0]!.id;
@@ -196,7 +202,12 @@ export async function executeLog(
   const projects = await projectRepo.findWithClientName(tenantId, { clientId });
   let resolvedProject: typeof projects[number] | undefined;
 
-  if (intent.project) {
+  if (intent.resolvedProjectId) {
+    resolvedProject = projects.find((p) => p.id === intent.resolvedProjectId);
+    if (!resolvedProject) {
+      return { type: 'error', message: 'Resolved project not found (may have been deleted).' };
+    }
+  } else if (intent.project) {
     const matches = projects.filter((p) =>
       p.name.toLowerCase().includes(intent.project!.toLowerCase()),
     );
@@ -213,6 +224,8 @@ export async function executeLog(
           extra: p.clientName,
         })),
         message: `I found ${matches.length} matching projects. Reply with the number.`,
+        pendingIntent: intent,
+        originalMessageId: messageId,
       };
     }
     resolvedProject = matches[0]!;
@@ -229,7 +242,12 @@ export async function executeLog(
   const tasks = await taskRepo.findByProject(resolvedProject.id, tenantId);
   let resolvedTask: typeof tasks[number] | undefined;
 
-  if (intent.task) {
+  if (intent.resolvedTaskId) {
+    resolvedTask = tasks.find((t) => t.id === intent.resolvedTaskId);
+    if (!resolvedTask) {
+      return { type: 'error', message: 'Resolved task not found (may have been deleted).' };
+    }
+  } else if (intent.task) {
     const matches = tasks.filter((t) =>
       t.name.toLowerCase().includes(intent.task!.toLowerCase()),
     );
@@ -242,6 +260,8 @@ export async function executeLog(
         entity: 'task',
         matches: matches.map((t) => ({ name: t.name, id: t.id })),
         message: `I found ${matches.length} matching tasks. Reply with the number.`,
+        pendingIntent: intent,
+        originalMessageId: messageId,
       };
     }
     resolvedTask = matches[0]!;
@@ -257,6 +277,34 @@ export async function executeLog(
   // --- Build time entry ---
   const now = new Date();
   const startTime = new Date(now.getTime() - intent.durationMinutes * 60_000);
+
+  // --- Overlap check (mirrors POST /api/time-entries) ---
+  const overlapping = await timeEntryRepo.findOverlapping(
+    ctx.user.id,
+    tenantId,
+    startTime,
+    now,
+  );
+  if (overlapping.length > 0) {
+    return {
+      type: 'error',
+      message: 'This time entry overlaps with an existing entry. Check /recent to see your logged entries.',
+    };
+  }
+
+  // --- Daily cap check: 24 hours = 1440 minutes ---
+  const existingMinutes = await timeEntryRepo.sumMinutesForDay(
+    ctx.user.id,
+    tenantId,
+    startTime,
+  );
+  if (existingMinutes + intent.durationMinutes > 1440) {
+    const remaining = 1440 - existingMinutes;
+    return {
+      type: 'error',
+      message: `Adding this entry would exceed 24 hours for the day. You have ${formatDuration(remaining)} remaining today.`,
+    };
+  }
 
   const entry = await timeEntryRepo.create(
     {

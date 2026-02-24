@@ -91,6 +91,7 @@ function renderHelp(): string {
     '/hours week - Total hours logged this week',
     '/log <duration> project:Name task:Name note:Optional',
     '  e.g. /log 1h30m project:Website task:Bugfix note:Fixed navbar',
+    '  If multiple matches found, reply with a number to select.',
     '/recent - Last 10 time entries',
     '/status - Today + week summary',
     '/link your@email.com - Link your Telegram to your account',
