@@ -59,7 +59,7 @@ export async function POST(request: Request) {
     const passwordHash = await hash(password, salt);
 
     // ---- Create tenant + user in a transaction ----
-    const { tenant, user } = await transaction(async (client) => {
+    const { user } = await transaction(async (client) => {
       const tenantResult = await client.query(
         `INSERT INTO tenants (id, name, plan, created_at, updated_at)
          VALUES (gen_random_uuid(), $1, 'free', now(), now())

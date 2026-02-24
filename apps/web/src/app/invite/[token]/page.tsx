@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import Link from 'next/link';
 import Input from '@/../components/ui/input';
@@ -24,7 +24,6 @@ const PASSWORD_PATTERN = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
 
 export default function AcceptInvitePage() {
   const params = useParams<{ token: string }>();
-  const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);

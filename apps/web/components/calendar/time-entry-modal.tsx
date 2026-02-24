@@ -247,8 +247,8 @@ export default function TimeEntryModal({
 
   const durationDisplay = useMemo(() => {
     if (!watchedStartTime || !watchedEndTime) return '—';
-    const [sh, sm] = watchedStartTime.split(':').map(Number);
-    const [eh, em] = watchedEndTime.split(':').map(Number);
+    const [sh = 0, sm = 0] = watchedStartTime.split(':').map(Number);
+    const [eh = 0, em = 0] = watchedEndTime.split(':').map(Number);
     const startMins = sh * 60 + sm;
     const endMins = eh * 60 + em;
     const diff = endMins - startMins;

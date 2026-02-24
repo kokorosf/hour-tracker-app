@@ -15,6 +15,10 @@ export const mockFindFiltered = jest.fn();
 export const mockCountFiltered = jest.fn();
 export const mockFindByEmail = jest.fn();
 export const mockFindByEmailGlobal = jest.fn();
+export const mockFindWithClientName = jest.fn();
+export const mockFindWithProjectName = jest.fn();
+export const mockFindOverlapping = jest.fn();
+export const mockSumMinutesForDay = jest.fn();
 
 export class ClientRepository {
   findByTenant = mockFindByTenant;
@@ -30,6 +34,7 @@ export class ProjectRepository {
   findByTenant = mockFindByTenant;
   findById = mockFindById;
   findByClient = mockFindByClient;
+  findWithClientName = mockFindWithClientName;
   create = mockCreate;
   count = mockCount;
 }
@@ -38,6 +43,7 @@ export class TaskRepository {
   findByTenant = mockFindByTenant;
   findById = mockFindById;
   findByProject = mockFindByProject;
+  findWithProjectName = mockFindWithProjectName;
   create = mockCreate;
   count = mockCount;
 }
@@ -47,6 +53,8 @@ export class TimeEntryRepository {
   findFiltered = mockFindFiltered;
   countFiltered = mockCountFiltered;
   findById = mockFindById;
+  findOverlapping = mockFindOverlapping;
+  sumMinutesForDay = mockSumMinutesForDay;
   create = mockCreate;
 }
 
@@ -63,3 +71,4 @@ export const getPool = jest.fn();
 export const testConnection = jest.fn();
 export const transaction = jest.fn();
 export const getTenantById = jest.fn();
+export const writeAuditLog = jest.fn();

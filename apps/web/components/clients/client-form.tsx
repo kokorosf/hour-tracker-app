@@ -7,8 +7,6 @@ import Input from '@/../components/ui/input';
 import Button from '@/../components/ui/button';
 import { useToast } from '@/../components/ui/toast';
 import { api } from '@/lib/api/client';
-import type { Client } from '@hour-tracker/types';
-
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -16,7 +14,7 @@ import type { Client } from '@hour-tracker/types';
 interface ClientFormProps {
   isOpen: boolean;
   onClose: () => void;
-  client: Client | null;
+  client: { id: string; name: string } | null;
   onSuccess: () => void;
 }
 

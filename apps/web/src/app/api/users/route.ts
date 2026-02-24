@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { genSalt, hash } from 'bcryptjs';
 import { UserRepository, getPool, getTenantById } from '@hour-tracker/database';
 import {
-  requireAuth,
   requireRole,
   getTenantId,
   type AuthenticatedRequest,

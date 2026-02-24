@@ -118,12 +118,6 @@ function getDateRange(preset: DateRangePreset, customStart?: Date, customEnd?: D
   }
 }
 
-function formatMinutesToHours(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  if (mins === 0) return `${hours}h`;
-  return `${hours}h ${mins}m`;
-}
 
 function formatHours(hours: number): string {
   const wholeHours = Math.floor(hours);
@@ -133,7 +127,7 @@ function formatHours(hours: number): string {
 }
 
 function formatDateForInput(date: Date): string {
-  return date.toISOString().split('T')[0];
+  return date.toISOString().split('T')[0] ?? '';
 }
 
 const PIE_COLORS = ['#3b82f6', '#94a3b8']; // blue-500, slate-400
@@ -396,7 +390,7 @@ export default function DashboardPage() {
                       outerRadius={100}
                       paddingAngle={2}
                       dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                       labelLine={false}
                     >
                       {pieData.map((_, index) => (
@@ -404,7 +398,7 @@ export default function DashboardPage() {
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(value: number) => formatHours(value / 60)}
+                      formatter={(value) => formatHours((Number(value) || 0) / 60)}
                       contentStyle={{
                         backgroundColor: 'white',
                         border: '1px solid #e5e7eb',
@@ -431,9 +425,9 @@ export default function DashboardPage() {
                     <XAxis type="number" tickFormatter={(v) => `${v}h`} />
                     <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} />
                     <Tooltip
-                      formatter={(value: number, name: string, props: { payload: { fullName: string } }) => [
+                      formatter={(value, _name, props) => [
                         `${value}h`,
-                        props.payload.fullName,
+                        (props as { payload: { fullName: string } }).payload.fullName,
                       ]}
                       contentStyle={{
                         backgroundColor: 'white',
@@ -462,9 +456,9 @@ export default function DashboardPage() {
                   <XAxis type="number" tickFormatter={(v) => `${v}h`} />
                   <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} />
                   <Tooltip
-                    formatter={(value: number, name: string, props: { payload: { fullName: string } }) => [
+                    formatter={(value, _name, props) => [
                       `${value}h`,
-                      props.payload.fullName,
+                      (props as { payload: { fullName: string } }).payload.fullName,
                     ]}
                     contentStyle={{
                       backgroundColor: 'white',
@@ -488,7 +482,7 @@ export default function DashboardPage() {
                   <XAxis dataKey="date" tick={{ fontSize: 12 }} />
                   <YAxis tickFormatter={(v) => `${v}h`} />
                   <Tooltip
-                    formatter={(value: number) => [`${value}h`, 'Hours']}
+                    formatter={(value) => [`${value}h`, 'Hours']}
                     contentStyle={{
                       backgroundColor: 'white',
                       border: '1px solid #e5e7eb',

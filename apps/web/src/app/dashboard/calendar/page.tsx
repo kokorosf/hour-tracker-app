@@ -9,9 +9,9 @@ import type {
   DateSelectArg,
   EventClickArg,
   EventDropArg,
-  EventResizeDoneArg,
   DatesSetArg,
 } from '@fullcalendar/core';
+import type { EventResizeDoneArg } from '@fullcalendar/interaction';
 import type { EventInput } from '@fullcalendar/core';
 import useSWR from 'swr';
 import { api } from '@/lib/api/client';

@@ -10,7 +10,7 @@ import type { User } from '@hour-tracker/types';
 
 const userRepo = new UserRepository();
 
-type RouteCtx = { params: Promise<{ id: string }> };
+type RouteCtx = { params: Promise<Record<string, string>> };
 
 /**
  * PUT /api/users/:id
@@ -24,7 +24,7 @@ export const PUT = requireRole('admin')(async (req: AuthenticatedRequest, ctx: R
   try {
     const tenantId = getTenantId(req);
     const currentUserId = getUserId(req);
-    const { id } = await ctx.params;
+    const { id } = (await ctx.params) as { id: string };
 
     // --- Cannot change own role ---
     if (id === currentUserId) {
@@ -79,7 +79,7 @@ export const DELETE = requireRole('admin')(async (req: AuthenticatedRequest, ctx
   try {
     const tenantId = getTenantId(req);
     const currentUserId = getUserId(req);
-    const { id } = await ctx.params;
+    const { id } = (await ctx.params) as { id: string };
 
     if (id === currentUserId) {
       return NextResponse.json(

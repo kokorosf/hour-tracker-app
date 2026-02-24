@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import {
   ProjectRepository,
   ClientRepository,
-  TaskRepository,
   transaction,
   writeAuditLog,
 } from '@hour-tracker/database';
@@ -17,9 +16,9 @@ import type { Project } from '@hour-tracker/types';
 
 const projectRepo = new ProjectRepository();
 const clientRepo = new ClientRepository();
-const taskRepo = new TaskRepository();
 
-type RouteCtx = { params: Promise<{ id: string }> };
+
+type RouteCtx = { params: Promise<Record<string, string>> };
 
 /**
  * GET /api/projects/:id
@@ -30,7 +29,7 @@ type RouteCtx = { params: Promise<{ id: string }> };
 export const GET = requireAuth(async (req: AuthenticatedRequest, ctx: RouteCtx) => {
   try {
     const tenantId = getTenantId(req);
-    const { id } = await ctx.params;
+    const { id } = (await ctx.params) as { id: string };
 
     const project = await projectRepo.findByIdWithClientName(id, tenantId);
     if (!project) {
@@ -59,7 +58,7 @@ export const GET = requireAuth(async (req: AuthenticatedRequest, ctx: RouteCtx) 
 export const PUT = requireRole('admin')(async (req: AuthenticatedRequest, ctx: RouteCtx) => {
   try {
     const tenantId = getTenantId(req);
-    const { id } = await ctx.params;
+    const { id } = (await ctx.params) as { id: string };
     const body = (await req.json()) as {
       name?: unknown;
       clientId?: unknown;
@@ -149,7 +148,7 @@ export const PUT = requireRole('admin')(async (req: AuthenticatedRequest, ctx: R
 export const DELETE = requireRole('admin')(async (req: AuthenticatedRequest, ctx: RouteCtx) => {
   try {
     const tenantId = getTenantId(req);
-    const { id } = await ctx.params;
+    const { id } = (await ctx.params) as { id: string };
 
     const existing = await projectRepo.findById(id, tenantId);
     if (!existing) {

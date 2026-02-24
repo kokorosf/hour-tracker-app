@@ -19,7 +19,7 @@ const timeEntryRepo = new TimeEntryRepository();
 const projectRepo = new ProjectRepository();
 const taskRepo = new TaskRepository();
 
-type RouteCtx = { params: Promise<{ id: string }> };
+type RouteCtx = { params: Promise<Record<string, string>> };
 
 /**
  * Check that the authenticated user is the owner of the entry or an admin.
@@ -37,7 +37,7 @@ function canAccess(req: AuthenticatedRequest, entryUserId: string): boolean {
 export const GET = requireAuth(async (req: AuthenticatedRequest, ctx: RouteCtx) => {
   try {
     const tenantId = getTenantId(req);
-    const { id } = await ctx.params;
+    const { id } = (await ctx.params) as { id: string };
 
     const entry = await timeEntryRepo.findByIdDetailed(id, tenantId);
     if (!entry) {
@@ -74,7 +74,7 @@ export const GET = requireAuth(async (req: AuthenticatedRequest, ctx: RouteCtx) 
 export const PUT = requireAuth(async (req: AuthenticatedRequest, ctx: RouteCtx) => {
   try {
     const tenantId = getTenantId(req);
-    const { id } = await ctx.params;
+    const { id } = (await ctx.params) as { id: string };
     const body = (await req.json()) as {
       projectId?: unknown;
       taskId?: unknown;
@@ -96,8 +96,6 @@ export const PUT = requireAuth(async (req: AuthenticatedRequest, ctx: RouteCtx) 
     const updates: Partial<TimeEntry> = {};
 
     // Resolve final values (use existing if not provided) for overlap check.
-    let finalProjectId = existing.projectId;
-    let finalTaskId = existing.taskId;
     let finalStart = existing.startTime;
     let finalEnd = existing.endTime;
 
@@ -117,7 +115,6 @@ export const PUT = requireAuth(async (req: AuthenticatedRequest, ctx: RouteCtx) 
         );
       }
       updates.projectId = projectId;
-      finalProjectId = projectId;
     }
 
     if (body.taskId !== undefined) {
@@ -136,7 +133,6 @@ export const PUT = requireAuth(async (req: AuthenticatedRequest, ctx: RouteCtx) 
         );
       }
       updates.taskId = taskId;
-      finalTaskId = taskId;
     }
 
     if (body.startTime !== undefined) {
@@ -234,7 +230,7 @@ export const PUT = requireAuth(async (req: AuthenticatedRequest, ctx: RouteCtx) 
 export const DELETE = requireAuth(async (req: AuthenticatedRequest, ctx: RouteCtx) => {
   try {
     const tenantId = getTenantId(req);
-    const { id } = await ctx.params;
+    const { id } = (await ctx.params) as { id: string };
 
     const existing = await timeEntryRepo.findById(id, tenantId);
     if (!existing || !canAccess(req, existing.userId)) {
