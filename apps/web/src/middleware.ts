@@ -44,13 +44,16 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const allowedHost = nextUrl.host;
+  // Behind reverse proxies (e.g. Cloud Run), nextUrl.host may be the
+  // internal container host. Accept the forwarded host as well.
+  const forwardedHost = headers.get('x-forwarded-host');
+  const allowedHosts = new Set([nextUrl.host, ...(forwardedHost ? [forwardedHost] : [])]);
 
   // Validate Origin header
   if (origin) {
     try {
       const originHost = new URL(origin).host;
-      if (originHost === allowedHost) {
+      if (allowedHosts.has(originHost)) {
         return NextResponse.next();
       }
     } catch {
@@ -62,7 +65,7 @@ export function middleware(request: NextRequest) {
   if (referer) {
     try {
       const refererHost = new URL(referer).host;
-      if (refererHost === allowedHost) {
+      if (allowedHosts.has(refererHost)) {
         return NextResponse.next();
       }
     } catch {
