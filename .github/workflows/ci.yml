@@ -116,5 +116,5 @@ jobs:
             --max-instances 3 \
             --memory 512Mi \
             --cpu 1 \
-            --set-env-vars "NODE_ENV=production" \
+            --update-env-vars "NODE_ENV=production" \
             --quiet
