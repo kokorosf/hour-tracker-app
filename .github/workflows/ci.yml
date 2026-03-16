@@ -106,6 +106,7 @@ jobs:
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy hour-tracker-web \
+            --project ${{ secrets.GCP_PROJECT_ID }} \
             --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/hour-tracker-web:${{ github.sha }} \
             --platform managed \
             --region ${{ secrets.GCP_REGION || 'us-central1' }} \
