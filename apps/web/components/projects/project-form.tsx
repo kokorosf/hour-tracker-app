@@ -35,6 +35,8 @@ interface ProjectFormProps {
   onClose: () => void;
   project: ProjectForForm | null;
   onSuccess: () => void;
+  /** Pre-fill the client when adding a project from a specific client. */
+  defaultClientId?: string;
 }
 
 interface FormValues {
@@ -53,7 +55,7 @@ const fetcher = <T,>(url: string) => api.get<T>(url);
 // Component
 // ---------------------------------------------------------------------------
 
-export default function ProjectForm({ isOpen, onClose, project, onSuccess }: ProjectFormProps) {
+export default function ProjectForm({ isOpen, onClose, project, onSuccess, defaultClientId }: ProjectFormProps) {
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
   const isEdit = project !== null;
@@ -78,11 +80,11 @@ export default function ProjectForm({ isOpen, onClose, project, onSuccess }: Pro
     if (isOpen) {
       reset({
         name: project?.name ?? '',
-        clientId: project?.clientId ?? '',
+        clientId: project?.clientId ?? defaultClientId ?? '',
         isBillable: project?.isBillable ?? true,
       });
     }
-  }, [isOpen, project, reset]);
+  }, [isOpen, project, defaultClientId, reset]);
 
   const onSubmit = async (data: FormValues) => {
     setSubmitting(true);

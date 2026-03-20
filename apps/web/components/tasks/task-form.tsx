@@ -35,6 +35,8 @@ interface TaskFormProps {
   onClose: () => void;
   task: TaskForForm | null;
   onSuccess: () => void;
+  /** Pre-fill the project when adding a task from a specific project. */
+  defaultProjectId?: string;
 }
 
 interface FormValues {
@@ -52,7 +54,7 @@ const fetcher = <T,>(url: string) => api.get<T>(url);
 // Component
 // ---------------------------------------------------------------------------
 
-export default function TaskForm({ isOpen, onClose, task, onSuccess }: TaskFormProps) {
+export default function TaskForm({ isOpen, onClose, task, onSuccess, defaultProjectId }: TaskFormProps) {
   const { showToast } = useToast();
   const [submitting, setSubmitting] = useState(false);
   const isEdit = task !== null;
@@ -77,10 +79,10 @@ export default function TaskForm({ isOpen, onClose, task, onSuccess }: TaskFormP
     if (isOpen) {
       reset({
         name: task?.name ?? '',
-        projectId: task?.projectId ?? '',
+        projectId: task?.projectId ?? defaultProjectId ?? '',
       });
     }
-  }, [isOpen, task, reset]);
+  }, [isOpen, task, defaultProjectId, reset]);
 
   const onSubmit = async (data: FormValues) => {
     setSubmitting(true);

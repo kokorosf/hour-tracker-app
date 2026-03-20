@@ -122,8 +122,8 @@ export default function TimerBar({ showSetup, onSetupDismiss }: TimerBarProps) {
     { revalidateOnFocus: false },
   );
 
-  const projects = projectData?.items ?? [];
-  const allTasks = taskData?.items ?? [];
+  const projects = useMemo(() => projectData?.items ?? [], [projectData?.items]);
+  const allTasks = useMemo(() => taskData?.items ?? [], [taskData?.items]);
 
   const setupFilteredTasks = useMemo(
     () => allTasks.filter((t) => t.projectId === setupProjectId),

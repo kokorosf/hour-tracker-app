@@ -10,6 +10,7 @@ import type {
   EventClickArg,
   EventDropArg,
   DatesSetArg,
+  EventContentArg,
 } from '@fullcalendar/core';
 import type { EventResizeDoneArg } from '@fullcalendar/interaction';
 import type { EventInput } from '@fullcalendar/core';
@@ -104,9 +105,11 @@ export default function CalendarPage() {
 
   /** Called whenever the visible date range changes (navigation / view switch). */
   const handleDatesSet = useCallback((arg: DatesSetArg) => {
+    // Use Date.toISOString() instead of arg.startStr/endStr to avoid
+    // timezone offset '+' being decoded as a space in URL query params.
     setDateRange({
-      start: arg.startStr,
-      end: arg.endStr,
+      start: arg.start.toISOString(),
+      end: arg.end.toISOString(),
     });
   }, []);
 
@@ -232,6 +235,33 @@ export default function CalendarPage() {
     mutate();
   }, [mutate]);
 
+  /** Custom event content — show time range + project/task in month view. */
+  const renderEventContent = useCallback((arg: EventContentArg) => {
+    const { event, view } = arg;
+    const start = event.start;
+    const end = event.end;
+    const timeStr =
+      start && end
+        ? `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}–${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+        : '';
+
+    if (view.type === 'dayGridMonth') {
+      return (
+        <div className="flex items-center gap-1 overflow-hidden px-1 text-xs leading-tight">
+          <span className="font-medium truncate">{timeStr}</span>
+          <span className="truncate opacity-80">{event.title}</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className="overflow-hidden px-1 py-0.5 text-xs leading-tight">
+        <div className="font-medium">{timeStr}</div>
+        <div className="truncate">{event.title}</div>
+      </div>
+    );
+  }, []);
+
   /** After modal delete — optimistically remove from cache + refetch. */
   const handleDeleted = useCallback(() => {
     const deletedId = editEntry?.id;
@@ -295,6 +325,7 @@ export default function CalendarPage() {
           selectMirror
           // Events.
           events={events}
+          eventContent={renderEventContent}
           // Callbacks.
           datesSet={handleDatesSet}
           select={handleSelect}
@@ -303,7 +334,7 @@ export default function CalendarPage() {
           eventResize={handleEventResize}
           // Styling.
           eventDisplay="block"
-          dayMaxEvents={3}
+          dayMaxEvents={5}
         />
       </div>
 

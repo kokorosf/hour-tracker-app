@@ -59,6 +59,27 @@ variable "docker_image" {
   type        = string
 }
 
+variable "cron_secret" {
+  description = "Bearer token for cron job authentication (empty = cron endpoints disabled)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "telegram_bot_token" {
+  description = "Telegram Bot API token (empty = Telegram integration disabled)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "anthropic_api_key" {
+  description = "Anthropic API key for AI features (empty = AI features disabled)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 provider "google" {
   project = var.project_id
   region  = var.region
@@ -82,17 +103,12 @@ resource "google_cloud_run_v2_service" "web" {
 
       env {
         name  = "DATABASE_URL"
-        value = "postgres://hourtracker_user:${var.db_password}@${google_compute_instance.database.network_interface[0].network_ip}:5432/hourtracker"
+        value = "postgres://hourtracker_user:${urlencode(var.db_password)}@${google_compute_instance.database.network_interface[0].network_ip}:5432/hourtracker"
       }
 
       env {
         name  = "AUTH_SECRET"
         value = var.auth_secret
-      }
-
-      env {
-        name  = "AUTH_URL"
-        value = "https://${google_cloud_run_v2_service.web.uri}"
       }
 
       env {
@@ -108,6 +124,21 @@ resource "google_cloud_run_v2_service" "web" {
       env {
         name  = "NODE_ENV"
         value = "production"
+      }
+
+      env {
+        name  = "CRON_SECRET"
+        value = var.cron_secret
+      }
+
+      env {
+        name  = "TELEGRAM_BOT_TOKEN"
+        value = var.telegram_bot_token
+      }
+
+      env {
+        name  = "ANTHROPIC_API_KEY"
+        value = var.anthropic_api_key
       }
 
       resources {
@@ -228,32 +259,23 @@ resource "google_compute_instance" "database" {
     access_config {}
   }
 
-  metadata = {
-    # cloud-init style: run PostgreSQL + Redis via Docker on Container-Optimized OS
-    gce-container-declaration = yamlencode({
-      spec = {
-        containers = [
-          {
-            name  = "postgres"
-            image = "postgres:16-alpine"
-            env = [
-              { name = "POSTGRES_DB", value = "hourtracker" },
-              { name = "POSTGRES_USER", value = "hourtracker_user" },
-              { name = "POSTGRES_PASSWORD", value = var.db_password },
-            ]
-            volumeMounts = [{ name = "pg-data", mountPath = "/var/lib/postgresql/data" }]
-          },
-          {
-            name  = "redis"
-            image = "redis:7-alpine"
-          },
-        ]
-        volumes = [
-          { name = "pg-data", emptyDir = {} },
-        ]
-      }
-    })
-  }
+  metadata_startup_script = replace(<<-EOT
+    #!/bin/bash
+    # Run PostgreSQL
+    docker run -d --name postgres --restart=always \
+      -e POSTGRES_DB=hourtracker \
+      -e POSTGRES_USER=hourtracker_user \
+      -e POSTGRES_PASSWORD='${var.db_password}' \
+      -v pg-data:/var/lib/postgresql/data \
+      -p 5432:5432 \
+      postgres:16-alpine
+
+    # Run Redis
+    docker run -d --name redis --restart=always \
+      -p 6379:6379 \
+      redis:7-alpine
+  EOT
+  , "\r", "")
 
   service_account {
     scopes = ["cloud-platform"]
@@ -294,7 +316,7 @@ resource "google_storage_bucket" "backups" {
 resource "google_cloud_scheduler_job" "weekly_reports" {
   name     = "hour-tracker-weekly-reports"
   schedule = "0 9 * * 1" # Every Monday at 9:00 AM
-  timezone = "America/New_York"
+  time_zone = "America/New_York"
 
   http_target {
     uri         = "${google_cloud_run_v2_service.web.uri}/api/reports/weekly"
@@ -303,6 +325,28 @@ resource "google_cloud_scheduler_job" "weekly_reports" {
     headers = {
       "Content-Type"    = "application/json"
       "X-Scheduler-Key" = var.auth_secret
+    }
+  }
+
+  retry_config {
+    retry_count          = 3
+    min_backoff_duration = "10s"
+    max_backoff_duration = "300s"
+  }
+}
+
+resource "google_cloud_scheduler_job" "monthly_accountant_report" {
+  name     = "hour-tracker-monthly-accountant-report"
+  schedule = "0 6 1 * *" # 1st of every month at 6:00 AM UTC
+  time_zone = "UTC"
+
+  http_target {
+    uri         = "${google_cloud_run_v2_service.web.uri}/api/cron/accountant-report"
+    http_method = "POST"
+
+    headers = {
+      "Content-Type"  = "application/json"
+      "Authorization" = "Bearer ${var.cron_secret}"
     }
   }
 

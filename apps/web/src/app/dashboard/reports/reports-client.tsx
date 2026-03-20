@@ -193,7 +193,7 @@ export default function ReportsClient({ userRole }: ReportsClientProps) {
   );
 
   // --- Computed ---
-  const entries = entriesData?.items ?? [];
+  const entries = useMemo(() => entriesData?.items ?? [], [entriesData?.items]);
   const pagination = entriesData?.pagination;
   const totalPages = pagination?.totalPages ?? 1;
   const totalEntries = pagination?.total ?? 0;

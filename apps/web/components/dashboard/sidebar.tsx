@@ -5,10 +5,8 @@ import { usePathname } from 'next/navigation';
 import {
   Home,
   Calendar,
-  Users,
   UserPlus,
-  Briefcase,
-  CheckSquare,
+  FolderTree,
   BarChart3,
   Settings,
   X,
@@ -30,10 +28,8 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard',  href: '/dashboard',           icon: Home        },
   { label: 'Calendar',   href: '/dashboard/calendar',  icon: Calendar    },
-  { label: 'Clients',    href: '/dashboard/clients',   icon: Users,      adminOnly: true },
-  { label: 'Projects',   href: '/dashboard/projects',  icon: Briefcase,  adminOnly: true },
-  { label: 'Tasks',      href: '/dashboard/tasks',     icon: CheckSquare, adminOnly: true },
-  { label: 'Users',      href: '/dashboard/users',     icon: UserPlus,    adminOnly: true },
+  { label: 'Manage',     href: '/dashboard/manage',    icon: FolderTree, adminOnly: true },
+  { label: 'Users',      href: '/dashboard/users',     icon: UserPlus,   adminOnly: true },
   { label: 'Reports',    href: '/dashboard/reports',   icon: BarChart3   },
   { label: 'Settings',   href: '/dashboard/settings',  icon: Settings    },
 ];

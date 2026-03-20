@@ -1,95 +1,48 @@
 # MCP Integration Guide
 
-This guide explains how to connect Hour Tracker to Claude Desktop using the Model Context Protocol (MCP). Once configured, you can log time, query projects, and check your status using natural language.
+This guide explains how to connect Hour Tracker to Claude Desktop or Claude Code using the Model Context Protocol (MCP). Once configured, you can log time, query projects, and check your status using natural language.
 
 ---
 
 ## Table of Contents
 
 1. [Authentication Setup](#authentication-setup)
-2. [Claude Desktop Configuration](#claude-desktop-configuration)
-3. [Available Methods](#available-methods)
-4. [Natural Language Duration Parsing](#natural-language-duration-parsing)
-5. [Error Handling](#error-handling)
-6. [Example Prompts](#example-prompts)
+2. [Build the MCP Server](#build-the-mcp-server)
+3. [Claude Desktop Configuration](#claude-desktop-configuration)
+4. [Claude Code Configuration](#claude-code-configuration)
+5. [Available Tools](#available-tools)
+6. [Natural Language Duration Parsing](#natural-language-duration-parsing)
+7. [Error Handling](#error-handling)
+8. [Example Prompts](#example-prompts)
 
 ---
 
 ## Authentication Setup
 
-The MCP endpoint requires a valid JWT token. To obtain one:
+The MCP server requires a valid JWT token to authenticate with the Hour Tracker API. To obtain one:
 
-1. Log in to Hour Tracker at `http://localhost:3000/login`.
+1. Log in to Hour Tracker at your deployed URL or `http://localhost:3000/login`.
 2. Open your browser's developer tools (F12) and go to the **Application** tab.
 3. Under **Local Storage**, find the `token` value.
-4. Copy this token — you will use it as your `API_KEY` in the Claude Desktop configuration.
+4. Copy this token — you will use it as `HOUR_TRACKER_API_TOKEN` in the configuration below.
 
 All requests are scoped to the tenant and user embedded in the JWT. Regular users can only log time and query data for their own tenant. Admin users have the same access.
 
 ---
 
-## Claude Desktop Configuration
+## Build the MCP Server
 
-### 1. Create the MCP client script
+The MCP server lives in `packages/mcp-server/`. Build it from the monorepo root:
 
-Create a file called `mcp-client.js` in your project (or anywhere on your machine):
-
-```js
-const http = require("http");
-const readline = require("readline");
-
-const API_URL = process.env.API_URL || "http://localhost:3000/api/mcp";
-const API_KEY = process.env.API_KEY || "";
-
-async function callMcp(method, params = {}) {
-  const body = JSON.stringify({ method, params });
-  const url = new URL(API_URL);
-
-  return new Promise((resolve, reject) => {
-    const req = http.request(
-      {
-        hostname: url.hostname,
-        port: url.port,
-        path: url.pathname,
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${API_KEY}`,
-          "Content-Length": Buffer.byteLength(body),
-        },
-      },
-      (res) => {
-        let data = "";
-        res.on("data", (chunk) => (data += chunk));
-        res.on("end", () => {
-          try {
-            resolve(JSON.parse(data));
-          } catch {
-            reject(new Error(`Invalid JSON: ${data}`));
-          }
-        });
-      }
-    );
-    req.on("error", reject);
-    req.write(body);
-    req.end();
-  });
-}
-
-// Simple stdin/stdout JSON-RPC loop for Claude Desktop
-const rl = readline.createInterface({ input: process.stdin });
-rl.on("line", async (line) => {
-  try {
-    const { method, params } = JSON.parse(line);
-    const result = await callMcp(method, params);
-    console.log(JSON.stringify(result));
-  } catch (err) {
-    console.log(JSON.stringify({ success: false, error: err.message }));
-  }
-});
+```bash
+npm run --workspace packages/mcp-server build
 ```
 
-### 2. Configure Claude Desktop
+This compiles TypeScript to `packages/mcp-server/dist/`.
+
+---
+
+## Claude Desktop Configuration
 
 Open your Claude Desktop configuration file:
 
@@ -103,43 +56,64 @@ Add the following entry:
   "mcpServers": {
     "hour-tracker": {
       "command": "node",
-      "args": ["path/to/mcp-client.js"],
+      "args": ["/absolute/path/to/packages/mcp-server/dist/index.js"],
       "env": {
-        "API_URL": "http://localhost:3000/api/mcp",
-        "API_KEY": "your-jwt-token"
+        "HOUR_TRACKER_API_URL": "https://your-cloud-run-url.run.app",
+        "HOUR_TRACKER_API_TOKEN": "your-jwt-token"
       }
     }
   }
 }
 ```
 
-Replace `path/to/mcp-client.js` with the absolute path to the script and `your-jwt-token` with the token from the authentication step.
-
-### 3. Restart Claude Desktop
+Replace:
+- `/absolute/path/to/...` with the absolute path to the compiled MCP server
+- `https://your-cloud-run-url.run.app` with your deployed app URL (or `http://localhost:3000` for local development)
+- `your-jwt-token` with the token from the authentication step
 
 After saving the configuration, restart Claude Desktop. The "hour-tracker" server should appear in the MCP servers list.
 
 ---
 
-## Available Methods
+## Claude Code Configuration
 
-All methods are called via `POST /api/mcp` with the body:
-
-```json
-{
-  "method": "<method_name>",
-  "params": { ... }
-}
-```
-
-Every response follows the envelope format:
+Add the MCP server to your project's `.claude/settings.json`:
 
 ```json
 {
-  "success": true,
-  "data": { ... }
+  "mcpServers": {
+    "hour-tracker": {
+      "command": "node",
+      "args": ["packages/mcp-server/dist/index.js"],
+      "env": {
+        "HOUR_TRACKER_API_URL": "https://your-cloud-run-url.run.app",
+        "HOUR_TRACKER_API_TOKEN": "your-jwt-token"
+      }
+    }
+  }
 }
 ```
+
+---
+
+## Testing with MCP Inspector
+
+You can test the MCP server interactively using the MCP Inspector:
+
+```bash
+HOUR_TRACKER_API_URL=https://your-app.run.app HOUR_TRACKER_API_TOKEN=your-token \
+  npx @modelcontextprotocol/inspector node packages/mcp-server/dist/index.js
+```
+
+This opens a web UI where you can invoke each tool and see the results.
+
+---
+
+## Available Tools
+
+The MCP server exposes 8 tools that Claude can discover and use automatically. Below is a reference for each tool and the underlying API method it calls.
+
+All tools call `POST /api/mcp` under the hood. Responses follow the envelope format `{ "success": true, "data": { ... } }`.
 
 ### query_clients
 
@@ -476,13 +450,18 @@ Once Claude Desktop is connected to the hour-tracker MCP server, try these promp
 
 **Claude Desktop doesn't show the MCP server:**
 - Verify the config JSON is valid (no trailing commas).
-- Check that the path to `mcp-client.js` is absolute.
+- Check that the path to `dist/index.js` is absolute.
+- Make sure you built the server first: `npm run --workspace packages/mcp-server build`
 - Restart Claude Desktop after changing the config.
+
+**"Missing required environment variable" error:**
+- Ensure both `HOUR_TRACKER_API_URL` and `HOUR_TRACKER_API_TOKEN` are set in the config.
 
 **401 errors on every request:**
 - Your JWT may have expired. Log in again and copy a fresh token.
-- Make sure `API_KEY` in the config has no extra whitespace.
+- Make sure `HOUR_TRACKER_API_TOKEN` in the config has no extra whitespace.
 
 **Connection refused:**
-- Ensure the Hour Tracker dev server is running on `http://localhost:3000`.
-- Check that no firewall is blocking localhost connections.
+- Ensure the Hour Tracker app is running at the URL specified in `HOUR_TRACKER_API_URL`.
+- For local development, use `http://localhost:3000`.
+- Check that no firewall is blocking connections.

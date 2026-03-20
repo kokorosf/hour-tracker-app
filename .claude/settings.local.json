@@ -2,7 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(npm run build:*)",
-      "Bash(npm --workspace apps/web test)"
+      "Bash(npm --workspace apps/web test)",
+      "mcp__plugin_compound-engineering_context7__resolve-library-id",
+      "Bash(npm test --workspace apps/web -- --ci --passWithNoTests)",
+      "mcp__plugin_compound-engineering_context7__query-docs",
+      "WebSearch",
+      "Bash(npm install)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(where npm.cmd)",
+      "Bash(where npm)",
+      "Bash(npx tsc --noEmit --project apps/web/tsconfig.json)"
     ]
   }
 }
