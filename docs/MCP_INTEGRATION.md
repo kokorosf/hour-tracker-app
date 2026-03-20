@@ -56,10 +56,10 @@ Add the following entry:
   "mcpServers": {
     "hour-tracker": {
       "command": "node",
-      "args": ["/absolute/path/to/packages/mcp-server/dist/index.js"],
+      "args": ["\Users\Kokoro Horiuchi\hour-tracker-app\packages\mcp-server\dist\index.js"],
       "env": {
-        "HOUR_TRACKER_API_URL": "https://your-cloud-run-url.run.app",
-        "HOUR_TRACKER_API_TOKEN": "your-jwt-token"
+        "HOUR_TRACKER_API_URL": "https://hour-tracker-web-753533696796.us-central1.run.app",
+        "HOUR_TRACKER_API_TOKEN": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwia2lkIjoiVE0yWEJjaXpKUDRkMFhDdHdJTV9Jb2YzU1dhRXllQXcwbFVVV1JBUEUwc2VjbkdQOTFTYjZlVkRzS0w2VlUxbDhoUVdJYW5Vc2lCZTBYNmtRTC13cEEifQ..McCbrYmMo2OyKcNlrBE7ng.L0kM8Aky90-xob8XfFH1DSwo63ZRtPTL24mYazJrUFdfZCcyWWsDmzgYut2EOU33clUEJvo-xwfhOcxakiKtgCaQJaBMBmB4sQqfc91yrOsXDw66nBb0JSVBgtjls9kIsEQQwO7EMuzLiXsX9FYorxPdnDxwElffc_d8NAFjU-VNP_S0gLVmz92eYPQ_Q7-hcZZ416ICvOcWlKpg1ytkpviigxd_C3KCLKFVH2lBRpDUVp2RP0xYCy0QpK2P3xzbb3Om54EY2aQNEn6o9LqDSgSgJQHK8P6ZRgyaBCdtldkQXOKyGNpHRf80a99MixEn.CbiwQy19EFvhY4t2ku3c6o8eGHwT-lVAIOqkxzlxMtg"
       }
     }
   }
@@ -86,8 +86,8 @@ Add the MCP server to your project's `.claude/settings.json`:
       "command": "node",
       "args": ["packages/mcp-server/dist/index.js"],
       "env": {
-        "HOUR_TRACKER_API_URL": "https://your-cloud-run-url.run.app",
-        "HOUR_TRACKER_API_TOKEN": "your-jwt-token"
+        "HOUR_TRACKER_API_URL": "https://hour-tracker-web-753533696796.us-central1.run.app",
+        "HOUR_TRACKER_API_TOKEN": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwia2lkIjoiVE0yWEJjaXpKUDRkMFhDdHdJTV9Jb2YzU1dhRXllQXcwbFVVV1JBUEUwc2VjbkdQOTFTYjZlVkRzS0w2VlUxbDhoUVdJYW5Vc2lCZTBYNmtRTC13cEEifQ..McCbrYmMo2OyKcNlrBE7ng.L0kM8Aky90-xob8XfFH1DSwo63ZRtPTL24mYazJrUFdfZCcyWWsDmzgYut2EOU33clUEJvo-xwfhOcxakiKtgCaQJaBMBmB4sQqfc91yrOsXDw66nBb0JSVBgtjls9kIsEQQwO7EMuzLiXsX9FYorxPdnDxwElffc_d8NAFjU-VNP_S0gLVmz92eYPQ_Q7-hcZZ416ICvOcWlKpg1ytkpviigxd_C3KCLKFVH2lBRpDUVp2RP0xYCy0QpK2P3xzbb3Om54EY2aQNEn6o9LqDSgSgJQHK8P6ZRgyaBCdtldkQXOKyGNpHRf80a99MixEn.CbiwQy19EFvhY4t2ku3c6o8eGHwT-lVAIOqkxzlxMtg"
       }
     }
   }
