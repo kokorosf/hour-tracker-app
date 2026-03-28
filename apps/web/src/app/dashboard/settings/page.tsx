@@ -6,7 +6,7 @@ import { api } from '@/lib/api/client';
 import { useToast } from '@/../components/ui/toast';
 import Button from '@/../components/ui/button';
 import Input from '@/../components/ui/input';
-import { User, Lock, Building2, Mail, MessageCircle } from 'lucide-react';
+import { User, Lock, Building2, Mail, MessageCircle, Copy, Check } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -36,6 +36,7 @@ const fetcher = <T,>(url: string) => api.get<T>(url);
 
 export default function SettingsPage() {
   const { showToast } = useToast();
+  const [tokenCopied, setTokenCopied] = useState(false);
 
   const { data: user, isLoading } = useSWR<CurrentUser>('/api/users/me', fetcher, {
     revalidateOnFocus: false,
@@ -72,6 +73,18 @@ export default function SettingsPage() {
       setTelegramConnected(true);
     }
   }, [tenantSettings]);
+
+  const handleCopyToken = useCallback(async () => {
+    const token = localStorage.getItem('token') ?? '';
+    if (!token) {
+      showToast('No token found. Try logging out and back in.', 'error');
+      return;
+    }
+    await navigator.clipboard.writeText(token);
+    setTokenCopied(true);
+    showToast('MCP token copied to clipboard.', 'success');
+    setTimeout(() => setTokenCopied(false), 2000);
+  }, [showToast]);
 
   const handlePasswordChange = useCallback(
     async (e: React.FormEvent) => {
@@ -219,6 +232,29 @@ export default function SettingsPage() {
                   <dt className="text-sm font-medium text-gray-500 sm:w-40">Tenant ID</dt>
                   <dd className="mt-1 text-sm font-mono text-gray-600 sm:mt-0">
                     {user.tenantId}
+                  </dd>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:gap-4">
+                  <dt className="text-sm font-medium text-gray-500 sm:w-40">MCP Token</dt>
+                  <dd className="mt-1 sm:mt-0 space-y-1">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleCopyToken}
+                    >
+                      {tokenCopied ? (
+                        <Check className="mr-1.5 h-3.5 w-3.5" />
+                      ) : (
+                        <Copy className="mr-1.5 h-3.5 w-3.5" />
+                      )}
+                      {tokenCopied ? 'Copied!' : 'Copy'}
+                    </Button>
+                    <p className="text-xs text-gray-500">
+                      Use this token as{' '}
+                      <span className="font-mono">HOUR_TRACKER_API_TOKEN</span> in your Claude
+                      Code MCP config.
+                    </p>
                   </dd>
                 </div>
               </dl>
