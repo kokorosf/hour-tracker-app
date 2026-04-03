@@ -250,11 +250,30 @@ export default function SettingsPage() {
                       )}
                       {tokenCopied ? 'Copied!' : 'Copy'}
                     </Button>
-                    <p className="text-xs text-gray-500">
-                      Use this token as{' '}
-                      <span className="font-mono">HOUR_TRACKER_API_TOKEN</span> in your Claude
-                      Code MCP config.
-                    </p>
+                    <div className="text-xs text-gray-500 space-y-2">
+                      <p>To use Hour Tracker with Claude Code:</p>
+                      <ol className="list-decimal list-inside space-y-1">
+                        <li>Copy the token above</li>
+                        <li>
+                          Create a{' '}
+                          <span className="font-mono">.mcp.json</span> file in your project root
+                        </li>
+                        <li>Paste in the config below, replacing the token placeholder</li>
+                        <li>Restart Claude Code</li>
+                      </ol>
+                      <pre className="mt-2 rounded bg-gray-100 p-2 text-xs leading-relaxed overflow-x-auto whitespace-pre">{`{
+  "mcpServers": {
+    "hour-tracker": {
+      "command": "npx",
+      "args": ["-y", "@hour-tracker/mcp-server"],
+      "env": {
+        "HOUR_TRACKER_API_URL": "${typeof window !== 'undefined' ? window.location.origin : ''}",
+        "HOUR_TRACKER_API_TOKEN": "<paste token here>"
+      }
+    }
+  }
+}`}</pre>
+                    </div>
                   </dd>
                 </div>
               </dl>
