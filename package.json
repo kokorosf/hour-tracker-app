@@ -11,7 +11,8 @@
     "build": "npm --workspace apps/web run build",
     "lint": "npm --workspace apps/web run lint",
     "format": "prettier --write .",
-    "typecheck": "npm --workspace apps/web run typecheck"
+    "typecheck": "npm --workspace apps/web run typecheck",
+    "publish:mcp": "npm --workspace packages/mcp-server run build && npm publish --workspace packages/mcp-server --access public"
   },
   "devDependencies": {
     "eslint": "^8.57.0",
