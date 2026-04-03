@@ -11,7 +11,9 @@
       "mcp__Claude_Preview__preview_start",
       "Bash(where npm.cmd)",
       "Bash(where npm)",
-      "Bash(npx tsc --noEmit --project apps/web/tsconfig.json)"
+      "Bash(npx tsc --noEmit --project apps/web/tsconfig.json)",
+      "Read(//c/Users/**)",
+      "Bash(grep -r \"cloud\\\\|gcp\\\\|google\\\\|storage\\\\|firestore\\\\|datastore\\\\|bigquery\" /c/Users/Kokoro Horiuchi/hour-tracker-app --include=*.md --include=*.txt --include=*.json --include=*.yaml)"
     ]
   }
 }

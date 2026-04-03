@@ -8,6 +8,7 @@ dist
 !.env.production.example
 *.log
 .DS_Store
+backup.sql
 
 # Terraform
 terraform/.terraform/

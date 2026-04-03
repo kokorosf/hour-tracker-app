@@ -141,6 +141,11 @@ resource "google_cloud_run_v2_service" "web" {
         value = var.anthropic_api_key
       }
 
+      env {
+        name  = "AUTH_URL"
+        value = "https://hour-tracker-web-753533696796.us-central1.run.app"
+      }
+
       resources {
         limits = {
           cpu    = "1"
@@ -164,8 +169,11 @@ resource "google_cloud_run_v2_service" "web" {
     }
 
     vpc_access {
-      connector = google_vpc_access_connector.connector.id
-      egress    = "PRIVATE_RANGES_ONLY"
+      network_interfaces {
+        network    = google_compute_network.vpc.name
+        subnetwork = google_compute_subnetwork.subnet.name
+      }
+      egress = "PRIVATE_RANGES_ONLY"
     }
   }
 
@@ -200,13 +208,6 @@ resource "google_compute_subnetwork" "subnet" {
   region        = var.region
 }
 
-resource "google_vpc_access_connector" "connector" {
-  name          = "hour-tracker-connector"
-  region        = var.region
-  ip_cidr_range = "10.8.0.0/28"
-  network       = google_compute_network.vpc.name
-}
-
 resource "google_compute_firewall" "allow_internal" {
   name    = "hour-tracker-allow-internal"
   network = google_compute_network.vpc.name
@@ -216,7 +217,7 @@ resource "google_compute_firewall" "allow_internal" {
     ports    = ["5432", "6379"]
   }
 
-  source_ranges = ["10.0.0.0/24", "10.8.0.0/28"]
+  source_ranges = ["10.0.0.0/24"]
   target_tags   = ["database"]
 }
 
@@ -248,7 +249,7 @@ resource "google_compute_instance" "database" {
     initialize_params {
       image = "cos-cloud/cos-stable"
       size  = 20
-      type  = "pd-ssd"
+      type  = "pd-standard"
     }
   }
 
