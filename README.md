@@ -1,4 +1,4 @@
-# Hour Tracker Monorepo
+# Pure Track
 
 A monorepo for the Hour Tracker multitenant time-tracking SaaS built with Next.js 14, TypeScript, PostgreSQL 16, Tailwind CSS, and NextAuth.js.
 
