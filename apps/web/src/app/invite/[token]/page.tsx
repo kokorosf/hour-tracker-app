@@ -73,7 +73,7 @@ export default function AcceptInvitePage() {
         <div className="w-full max-w-md">
           <div className="mb-8 text-center">
             <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-              Hour Tracker
+              Pure Track
             </h1>
           </div>
 
@@ -110,7 +110,7 @@ export default function AcceptInvitePage() {
         {/* Header */}
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-            Hour Tracker
+            Pure Track
           </h1>
           <p className="mt-2 text-sm text-gray-600">
             Set your password to activate your account

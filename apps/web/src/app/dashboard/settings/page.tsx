@@ -251,7 +251,7 @@ export default function SettingsPage() {
                       {tokenCopied ? 'Copied!' : 'Copy'}
                     </Button>
                     <div className="text-xs text-gray-500 space-y-2">
-                      <p>To use Hour Tracker with Claude Code:</p>
+                      <p>To use Pure Track with Claude Code:</p>
                       <ol className="list-decimal list-inside space-y-1">
                         <li>Copy the token above</li>
                         <li>
@@ -446,7 +446,7 @@ export default function SettingsPage() {
               <dl className="space-y-3">
                 <div className="flex flex-col sm:flex-row sm:gap-4">
                   <dt className="text-sm font-medium text-gray-500 sm:w-40">Application</dt>
-                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0">Hour Tracker</dd>
+                  <dd className="mt-1 text-sm text-gray-900 sm:mt-0">Pure Track</dd>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:gap-4">
                   <dt className="text-sm font-medium text-gray-500 sm:w-40">Version</dt>

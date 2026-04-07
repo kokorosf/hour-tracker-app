@@ -94,7 +94,7 @@ export const POST = requireRole('admin')(async (req: AuthenticatedRequest) => {
 
     // Generate PDF attachment
     const tenant = await getTenantById(tenantId);
-    const companyName = tenant?.name ?? 'Hour Tracker';
+    const companyName = tenant?.name ?? 'Pure Track';
     const pdfBuffer = generateReportPdf(companyName, entries, dateRange);
 
     // Send email

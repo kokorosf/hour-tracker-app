@@ -132,7 +132,7 @@ export default function Sidebar({ isOpen, onClose, userRole, badges = {} }: Side
         ].join(' ')}
       >
         <div className="flex h-16 shrink-0 items-center justify-between border-b border-gray-200 px-4">
-          <span className="text-lg font-bold text-gray-900">Hour Tracker</span>
+          <span className="text-lg font-bold text-gray-900">Pure Track</span>
           <button
             type="button"
             onClick={onClose}
@@ -148,7 +148,7 @@ export default function Sidebar({ isOpen, onClose, userRole, badges = {} }: Side
       {/* Desktop sidebar */}
       <aside className="hidden lg:fixed lg:inset-y-0 lg:z-30 lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-gray-200 lg:bg-white">
         <div className="flex h-16 shrink-0 items-center border-b border-gray-200 px-4">
-          <span className="text-lg font-bold text-gray-900">Hour Tracker</span>
+          <span className="text-lg font-bold text-gray-900">Pure Track</span>
         </div>
         {navContent}
       </aside>

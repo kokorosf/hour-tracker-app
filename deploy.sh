@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# deploy.sh — Build, push, migrate, and deploy hour-tracker to GCP.
+# deploy.sh — Build, push, migrate, and deploy hour-tracker to GCP VM.
 #
 # Usage:
 #   ./deploy.sh                       # full deploy (build + push + migrate + deploy)
@@ -9,8 +9,7 @@
 #
 # Required environment variables (or set in .env.production):
 #   GCP_PROJECT_ID    — Google Cloud project ID
-#   GCP_REGION        — Target region          (default: us-central1)
-#   DB_HOST           — Database host IP
+#   GCP_ZONE          — VM zone               (default: us-central1-a)
 #   DB_PASSWORD       — Database password
 #   IMAGE_TAG         — Docker image tag        (default: latest)
 
@@ -32,14 +31,14 @@ if [[ -f "${SCRIPT_DIR}/.env.production" ]]; then
 fi
 
 GCP_PROJECT_ID="${GCP_PROJECT_ID:?Error: GCP_PROJECT_ID is not set}"
-GCP_REGION="${GCP_REGION:-us-central1}"
-DB_HOST="${DB_HOST:?Error: DB_HOST is not set}"
+GCP_ZONE="${GCP_ZONE:-us-central1-a}"
 DB_PASSWORD="${DB_PASSWORD:?Error: DB_PASSWORD is not set}"
 IMAGE_TAG="${IMAGE_TAG:-latest}"
 
 IMAGE_NAME="gcr.io/${GCP_PROJECT_ID}/hour-tracker-web"
 IMAGE_FULL="${IMAGE_NAME}:${IMAGE_TAG}"
 
+VM_NAME="hour-tracker-app"
 DB_USER="hourtracker_user"
 DB_NAME="hourtracker"
 
@@ -66,7 +65,7 @@ log() { echo -e "\n\033[1;34m==>\033[0m \033[1m$*\033[0m"; }
 err() { echo -e "\n\033[1;31mERROR:\033[0m $*" >&2; exit 1; }
 
 check_dependencies() {
-  local deps=("docker" "gcloud" "psql")
+  local deps=("docker" "gcloud")
   for cmd in "${deps[@]}"; do
     command -v "$cmd" >/dev/null 2>&1 || err "'$cmd' is required but not installed."
   done
@@ -109,49 +108,41 @@ run_migrations() {
     err "Migration directory not found: ${MIGRATION_DIR}"
   fi
 
-  export PGPASSWORD="${DB_PASSWORD}"
-
-  # Run each .sql file in order
   for migration in "${MIGRATION_DIR}"/*.sql; do
     [[ -f "$migration" ]] || continue
     filename="$(basename "$migration")"
     log "  Applying: ${filename}"
-    psql -h "${DB_HOST}" -U "${DB_USER}" -d "${DB_NAME}" -f "$migration" \
-      --set ON_ERROR_STOP=1 2>&1 || {
+    cat "$migration" | gcloud compute ssh "${VM_NAME}" \
+      --zone="${GCP_ZONE}" \
+      --project="${GCP_PROJECT_ID}" \
+      --command="docker exec -i hourtracker-postgres psql -U ${DB_USER} -d ${DB_NAME} --set ON_ERROR_STOP=1" \
+      2>&1 || {
         echo "  Warning: ${filename} may have already been applied (continuing...)"
       }
   done
 
-  unset PGPASSWORD
   log "Migrations complete."
 }
 
 # ──────────────────────────────────────────────
-# 4. Deploy to Cloud Run
+# 4. Deploy to VM
 # ──────────────────────────────────────────────
 
-deploy_cloud_run() {
-  log "Deploying to Cloud Run (${GCP_REGION})..."
+deploy_to_vm() {
+  log "Deploying to VM (${VM_NAME})..."
 
-  gcloud run deploy hour-tracker-web \
-    --image "${IMAGE_FULL}" \
-    --platform managed \
-    --region "${GCP_REGION}" \
-    --port 3000 \
-    --allow-unauthenticated \
-    --min-instances 0 \
-    --max-instances 3 \
-    --memory 512Mi \
-    --cpu 1 \
-    --set-env-vars "NODE_ENV=production" \
-    --quiet
-
-  SERVICE_URL="$(gcloud run services describe hour-tracker-web \
-    --region "${GCP_REGION}" \
-    --format 'value(status.url)')"
+  gcloud compute ssh "${VM_NAME}" \
+    --zone="${GCP_ZONE}" \
+    --project="${GCP_PROJECT_ID}" \
+    --command="
+      gcloud auth configure-docker --quiet && \
+      docker pull ${IMAGE_FULL} && \
+      cd /opt/hour-tracker && \
+      docker compose up -d --no-deps web
+    "
 
   log "Deployed successfully!"
-  echo "  URL: ${SERVICE_URL}"
+  echo "  URL: https://${DOMAIN:-puretrack.duckdns.org}"
 }
 
 # ──────────────────────────────────────────────
@@ -172,7 +163,7 @@ main() {
   fi
 
   run_migrations
-  deploy_cloud_run
+  deploy_to_vm
 
   log "Deployment complete."
 }

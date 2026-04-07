@@ -1,5 +1,5 @@
 /**
- * MCP tool definitions for Hour Tracker.
+ * MCP tool definitions for Pure Track.
  *
  * Each tool maps 1:1 to a method on the /api/mcp endpoint.
  */

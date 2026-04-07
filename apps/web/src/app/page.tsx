@@ -3,7 +3,7 @@ export default function HomePage() {
     <main className="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 px-6 py-16">
       <header className="space-y-4">
         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">
-          Hour Tracker
+          Pure Track
         </p>
         <h1 className="text-4xl font-semibold text-slate-900 sm:text-5xl">
           Multitenant time tracking that keeps every client aligned.

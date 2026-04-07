@@ -5,7 +5,7 @@
 //   1. telegram-webhook → receives update
 //   2. chat-router      → maps senderId → userId + tenantId
 //   3. intent-parser    → parses commands into action schemas
-//   4. action-executor  → calls existing Hour Tracker business logic
+//   4. action-executor  → calls existing Pure Track business logic
 //   5. response-renderer→ sends concise Telegram reply
 //
 // Natural-language messages still fall through to the Claude agentic loop.
@@ -42,7 +42,7 @@ function getAnthropicClient(): Anthropic {
 function buildSystemPrompt(tenantName: string, userIsLinked: boolean): string {
   const today = new Date().toISOString().split('T')[0];
   return [
-    `You are a time-tracking assistant for "${tenantName}", which uses Hour Tracker.`,
+    `You are a time-tracking assistant for "${tenantName}", which uses Pure Track.`,
     `Today's date is ${today}.`,
     '',
     'You can answer questions about employee hours, projects, and clients by calling the available tools.',
@@ -89,7 +89,7 @@ export async function handleTelegramMessage(
   if (!ctx) {
     await sendMessage(
       chatId,
-      'This chat is not connected to any organisation. Please set up the Telegram integration in your Hour Tracker settings.',
+      'This chat is not connected to any organisation. Please set up the Telegram integration in your Pure Track settings.',
       '',
     );
     return;

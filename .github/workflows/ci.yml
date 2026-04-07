@@ -103,18 +103,14 @@ jobs:
           docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/hour-tracker-web:${{ github.sha }}
           docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/hour-tracker-web:latest
 
-      - name: Deploy to Cloud Run
+      - name: Deploy to VM
         run: |
-          gcloud run deploy hour-tracker-web \
-            --project ${{ secrets.GCP_PROJECT_ID }} \
-            --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/hour-tracker-web:${{ github.sha }} \
-            --platform managed \
-            --region ${{ secrets.GCP_REGION || 'us-central1' }} \
-            --port 3000 \
-            --allow-unauthenticated \
-            --min-instances 0 \
-            --max-instances 3 \
-            --memory 512Mi \
-            --cpu 1 \
-            --update-env-vars "NODE_ENV=production" \
-            --quiet
+          gcloud compute ssh hour-tracker-app \
+            --zone=us-central1-a \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --command="
+              gcloud auth configure-docker --quiet &&
+              docker pull gcr.io/${{ secrets.GCP_PROJECT_ID }}/hour-tracker-web:latest &&
+              cd /opt/hour-tracker &&
+              docker compose up -d --no-deps web
+            "

@@ -103,7 +103,7 @@ export const POST = requireAuth(async (req: AuthenticatedRequest) => {
 
     // Fetch tenant info for company name
     const tenant = await getTenantById(tenantId);
-    const companyName = tenant?.name ?? 'Hour Tracker';
+    const companyName = tenant?.name ?? 'Pure Track';
 
     // Fetch entries with client names
     const entries = await timeEntryRepo.findFilteredWithClient(tenantId, {

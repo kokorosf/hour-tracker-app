@@ -30,7 +30,7 @@ export default function Topbar({ email, tenantName, onMenuToggle, onStartTimer }
       </button>
 
       {/* App name — mobile only (desktop has it in sidebar) */}
-      <span className="text-lg font-bold text-gray-900 lg:hidden">Hour Tracker</span>
+      <span className="text-lg font-bold text-gray-900 lg:hidden">Pure Track</span>
 
       {/* Spacer */}
       <div className="flex-1" />

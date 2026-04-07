@@ -65,7 +65,7 @@ export async function sendInvitation(
   const msg = {
     to,
     from: FROM_EMAIL,
-    subject: `You've been invited to join ${tenantName} on Hour Tracker`,
+    subject: `You've been invited to join ${tenantName} on Pure Track`,
     html,
   };
 
@@ -92,7 +92,7 @@ export async function sendPasswordReset(
   const msg = {
     to,
     from: FROM_EMAIL,
-    subject: 'Reset your Hour Tracker password',
+    subject: 'Reset your Pure Track password',
     html,
   };
 

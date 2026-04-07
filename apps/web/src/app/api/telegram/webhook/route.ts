@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
         const { sendMessage } = await import('@/lib/telegram/client');
         await sendMessage(
           chatId,
-          `Welcome! Your chat ID is: ${chatId}\n\nPaste this into your Hour Tracker settings to connect this chat.`,
+          `Welcome! Your chat ID is: ${chatId}\n\nPaste this into your Pure Track settings to connect this chat.`,
           '',
         );
         return NextResponse.json({ ok: true });

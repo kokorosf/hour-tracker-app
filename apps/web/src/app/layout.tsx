@@ -3,7 +3,7 @@ import { ToastProvider } from '@/../components/ui/toast';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Hour Tracker',
+  title: 'Pure Track',
   description: 'Multitenant time tracking for modern teams.'
 };
 

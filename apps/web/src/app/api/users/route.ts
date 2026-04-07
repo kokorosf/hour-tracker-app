@@ -132,7 +132,7 @@ export const POST = requireRole('admin')(async (req: AuthenticatedRequest) => {
 
     // --- Send invitation email (best-effort) ---
     const tenant = await getTenantById(tenantId);
-    const tenantName = tenant?.name ?? 'Hour Tracker';
+    const tenantName = tenant?.name ?? 'Pure Track';
     try {
       await sendInvitation(email, req.user.email, tenantName, inviteLink);
     } catch (emailErr) {

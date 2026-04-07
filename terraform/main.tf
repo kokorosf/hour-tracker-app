@@ -24,7 +24,7 @@ variable "project_id" {
 }
 
 variable "region" {
-  description = "GCP region for Cloud Run and related resources"
+  description = "GCP region"
   type        = string
   default     = "us-central1"
 }
@@ -33,6 +33,11 @@ variable "zone" {
   description = "GCP zone for Compute Engine"
   type        = string
   default     = "us-central1-a"
+}
+
+variable "domain" {
+  description = "Domain name for the app (e.g. puretrack.duckdns.org)"
+  type        = string
 }
 
 variable "db_password" {
@@ -86,144 +91,21 @@ provider "google" {
 }
 
 # ──────────────────────────────────────────────
-# Cloud Run — Web Application
+# Static IP
 # ──────────────────────────────────────────────
 
-resource "google_cloud_run_v2_service" "web" {
-  name     = "hour-tracker-web"
-  location = var.region
-
-  template {
-    containers {
-      image = var.docker_image
-
-      ports {
-        container_port = 3000
-      }
-
-      env {
-        name  = "DATABASE_URL"
-        value = "postgres://hourtracker_user:${urlencode(var.db_password)}@${google_compute_instance.database.network_interface[0].network_ip}:5432/hourtracker"
-      }
-
-      env {
-        name  = "AUTH_SECRET"
-        value = var.auth_secret
-      }
-
-      env {
-        name  = "REDIS_URL"
-        value = "redis://${google_compute_instance.database.network_interface[0].network_ip}:6379"
-      }
-
-      env {
-        name  = "SENDGRID_API_KEY"
-        value = var.sendgrid_api_key
-      }
-
-      env {
-        name  = "NODE_ENV"
-        value = "production"
-      }
-
-      env {
-        name  = "CRON_SECRET"
-        value = var.cron_secret
-      }
-
-      env {
-        name  = "TELEGRAM_BOT_TOKEN"
-        value = var.telegram_bot_token
-      }
-
-      env {
-        name  = "ANTHROPIC_API_KEY"
-        value = var.anthropic_api_key
-      }
-
-      env {
-        name  = "AUTH_URL"
-        value = "https://hour-tracker-web-753533696796.us-central1.run.app"
-      }
-
-      resources {
-        limits = {
-          cpu    = "1"
-          memory = "512Mi"
-        }
-      }
-
-      startup_probe {
-        http_get {
-          path = "/api/health"
-        }
-        initial_delay_seconds = 5
-        period_seconds        = 10
-        failure_threshold     = 3
-      }
-    }
-
-    scaling {
-      min_instance_count = 0
-      max_instance_count = 3
-    }
-
-    vpc_access {
-      network_interfaces {
-        network    = google_compute_network.vpc.name
-        subnetwork = google_compute_subnetwork.subnet.name
-      }
-      egress = "PRIVATE_RANGES_ONLY"
-    }
-  }
-
-  traffic {
-    percent = 100
-    type    = "TRAFFIC_TARGET_ALLOCATION_TYPE_LATEST"
-  }
-}
-
-# Allow unauthenticated access (public web app)
-resource "google_cloud_run_v2_service_iam_member" "public" {
-  project  = var.project_id
-  location = var.region
-  name     = google_cloud_run_v2_service.web.name
-  role     = "roles/run.invoker"
-  member   = "allUsers"
+resource "google_compute_address" "static_ip" {
+  name   = "hour-tracker-static-ip"
+  region = var.region
 }
 
 # ──────────────────────────────────────────────
-# VPC — Networking
+# Firewall Rules
 # ──────────────────────────────────────────────
-
-resource "google_compute_network" "vpc" {
-  name                    = "hour-tracker-vpc"
-  auto_create_subnetworks = false
-}
-
-resource "google_compute_subnetwork" "subnet" {
-  name          = "hour-tracker-subnet"
-  ip_cidr_range = "10.0.0.0/24"
-  network       = google_compute_network.vpc.id
-  region        = var.region
-}
-
-resource "google_compute_firewall" "allow_internal" {
-  name    = "hour-tracker-allow-internal"
-  network = google_compute_network.vpc.name
-
-  allow {
-    protocol = "tcp"
-    ports    = ["5432", "6379"]
-  }
-
-  source_ranges = ["10.0.0.0/24"]
-  target_tags   = ["database"]
-}
 
 resource "google_compute_firewall" "allow_ssh" {
   name    = "hour-tracker-allow-ssh"
-  network = google_compute_network.vpc.name
+  network = "default"
 
   allow {
     protocol = "tcp"
@@ -231,50 +113,134 @@ resource "google_compute_firewall" "allow_ssh" {
   }
 
   source_ranges = ["0.0.0.0/0"]
-  target_tags   = ["database"]
+  target_tags   = ["hour-tracker"]
+}
+
+resource "google_compute_firewall" "allow_http_https" {
+  name    = "hour-tracker-allow-http-https"
+  network = "default"
+
+  allow {
+    protocol = "tcp"
+    ports    = ["80", "443"]
+  }
+
+  source_ranges = ["0.0.0.0/0"]
+  target_tags   = ["hour-tracker"]
 }
 
 # ──────────────────────────────────────────────
-# Compute Engine — Database (e2-micro)
+# Compute Engine — App Server (e2-micro)
 # ──────────────────────────────────────────────
 
-resource "google_compute_instance" "database" {
-  name         = "hour-tracker-db"
+resource "google_compute_instance" "app" {
+  name         = "hour-tracker-app"
   machine_type = "e2-micro"
   zone         = var.zone
 
-  tags = ["database"]
+  tags = ["hour-tracker"]
 
   boot_disk {
     initialize_params {
-      image = "cos-cloud/cos-stable"
+      image = "debian-cloud/debian-12"
       size  = 20
       type  = "pd-standard"
     }
   }
 
   network_interface {
-    subnetwork = google_compute_subnetwork.subnet.id
+    network = "default"
 
-    # Ephemeral public IP for SSH access; remove for tighter security
-    access_config {}
+    access_config {
+      nat_ip = google_compute_address.static_ip.address
+    }
   }
 
   metadata_startup_script = replace(<<-EOT
     #!/bin/bash
-    # Run PostgreSQL
-    docker run -d --name postgres --restart=always \
-      -e POSTGRES_DB=hourtracker \
-      -e POSTGRES_USER=hourtracker_user \
-      -e POSTGRES_PASSWORD='${var.db_password}' \
-      -v pg-data:/var/lib/postgresql/data \
-      -p 5432:5432 \
-      postgres:16-alpine
+    set -euo pipefail
 
-    # Run Redis
-    docker run -d --name redis --restart=always \
-      -p 6379:6379 \
-      redis:7-alpine
+    # Install Docker if not present
+    if ! command -v docker &>/dev/null; then
+      curl -fsSL https://get.docker.com | sh
+    fi
+
+    # Install Docker Compose plugin if not present
+    if ! docker compose version &>/dev/null; then
+      apt-get update && apt-get install -y docker-compose-plugin
+    fi
+
+    # Authenticate Docker to GCR
+    gcloud auth configure-docker --quiet
+
+    # Pull images
+    docker pull ${var.docker_image}
+    docker pull postgres:16-alpine
+    docker pull caddy:2-alpine
+
+    # Create working directory
+    mkdir -p /opt/hour-tracker
+
+    # Write Caddyfile
+    cat > /opt/hour-tracker/Caddyfile <<'CADDY'
+    ${var.domain} {
+      reverse_proxy web:3000
+    }
+    CADDY
+
+    # Write docker-compose.yml
+    cat > /opt/hour-tracker/docker-compose.yml <<COMPOSE
+    services:
+      postgres:
+        image: postgres:16-alpine
+        container_name: hourtracker-postgres
+        restart: always
+        environment:
+          POSTGRES_DB: hourtracker
+          POSTGRES_USER: hourtracker_user
+          POSTGRES_PASSWORD: "${var.db_password}"
+        command: postgres -c shared_buffers=64MB -c effective_cache_size=128MB -c work_mem=2MB -c maintenance_work_mem=32MB
+        volumes:
+          - pg-data:/var/lib/postgresql/data
+
+      web:
+        image: ${var.docker_image}
+        container_name: hourtracker-web
+        restart: always
+        depends_on:
+          - postgres
+        environment:
+          DATABASE_URL: "postgres://hourtracker_user:${urlencode(var.db_password)}@postgres:5432/hourtracker"
+          AUTH_SECRET: "${var.auth_secret}"
+          AUTH_URL: "https://${var.domain}"
+          NODE_ENV: production
+          SENDGRID_API_KEY: "${var.sendgrid_api_key}"
+          CRON_SECRET: "${var.cron_secret}"
+          TELEGRAM_BOT_TOKEN: "${var.telegram_bot_token}"
+          ANTHROPIC_API_KEY: "${var.anthropic_api_key}"
+
+      caddy:
+        image: caddy:2-alpine
+        container_name: hourtracker-caddy
+        restart: always
+        ports:
+          - "80:80"
+          - "443:443"
+        volumes:
+          - ./Caddyfile:/etc/caddy/Caddyfile:ro
+          - caddy_data:/data
+          - caddy_config:/config
+        depends_on:
+          - web
+
+    volumes:
+      pg-data:
+      caddy_data:
+      caddy_config:
+    COMPOSE
+
+    cd /opt/hour-tracker
+    docker compose up -d
   EOT
   , "\r", "")
 
@@ -311,16 +277,16 @@ resource "google_storage_bucket" "backups" {
 }
 
 # ──────────────────────────────────────────────
-# Cloud Scheduler — Weekly Reports
+# Cloud Scheduler — Cron Jobs
 # ──────────────────────────────────────────────
 
 resource "google_cloud_scheduler_job" "weekly_reports" {
-  name     = "hour-tracker-weekly-reports"
-  schedule = "0 9 * * 1" # Every Monday at 9:00 AM
+  name      = "hour-tracker-weekly-reports"
+  schedule  = "0 9 * * 1" # Every Monday at 9:00 AM
   time_zone = "America/New_York"
 
   http_target {
-    uri         = "${google_cloud_run_v2_service.web.uri}/api/reports/weekly"
+    uri         = "https://${var.domain}/api/reports/weekly"
     http_method = "POST"
 
     headers = {
@@ -337,12 +303,12 @@ resource "google_cloud_scheduler_job" "weekly_reports" {
 }
 
 resource "google_cloud_scheduler_job" "monthly_accountant_report" {
-  name     = "hour-tracker-monthly-accountant-report"
-  schedule = "0 6 1 * *" # 1st of every month at 6:00 AM UTC
+  name      = "hour-tracker-monthly-accountant-report"
+  schedule  = "0 6 1 * *" # 1st of every month at 6:00 AM UTC
   time_zone = "UTC"
 
   http_target {
-    uri         = "${google_cloud_run_v2_service.web.uri}/api/cron/accountant-report"
+    uri         = "https://${var.domain}/api/cron/accountant-report"
     http_method = "POST"
 
     headers = {
@@ -362,14 +328,14 @@ resource "google_cloud_scheduler_job" "monthly_accountant_report" {
 # Outputs
 # ──────────────────────────────────────────────
 
-output "web_url" {
-  description = "Cloud Run service URL"
-  value       = google_cloud_run_v2_service.web.uri
+output "static_ip" {
+  description = "Static IP of the app server"
+  value       = google_compute_address.static_ip.address
 }
 
-output "database_internal_ip" {
-  description = "Internal IP of the database VM"
-  value       = google_compute_instance.database.network_interface[0].network_ip
+output "web_url" {
+  description = "Application URL"
+  value       = "https://${var.domain}"
 }
 
 output "backup_bucket" {

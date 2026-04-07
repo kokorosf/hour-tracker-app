@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
 /**
- * Hour Tracker MCP Server
+ * Pure Track MCP Server
  *
- * A Model Context Protocol server that exposes Hour Tracker tools to AI
+ * A Model Context Protocol server that exposes Pure Track tools to AI
  * assistants like Claude Desktop and Claude Code. Communicates over stdio
- * and forwards tool calls to the deployed Hour Tracker API.
+ * and forwards tool calls to the deployed Pure Track API.
  *
  * Required environment variables:
  *   HOUR_TRACKER_API_URL   — URL of the deployed app (e.g. https://your-app.run.app)
@@ -22,7 +22,7 @@ function getRequiredEnv(name: string): string {
   if (!value) {
     process.stderr.write(
       `ERROR: Missing required environment variable: ${name}\n\n` +
-        'The Hour Tracker MCP server requires:\n' +
+        'The Pure Track MCP server requires:\n' +
         '  HOUR_TRACKER_API_URL   — URL of the deployed app (e.g. https://your-app.run.app)\n' +
         '  HOUR_TRACKER_API_TOKEN — A valid JWT bearer token\n\n' +
         'Set these in your Claude Desktop config or shell environment.\n',
@@ -49,7 +49,7 @@ async function main() {
   await server.connect(transport);
 
   // Log to stderr — stdout is reserved for MCP JSON-RPC protocol
-  process.stderr.write('Hour Tracker MCP server running on stdio\n');
+  process.stderr.write('Pure Track MCP server running on stdio\n');
 }
 
 main().catch((error) => {

@@ -94,7 +94,7 @@ export default function RegisterPage() {
       {/* Header */}
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-          Hour Tracker
+          Pure Track
         </h1>
         <p className="mt-2 text-sm text-gray-600">
           Create your account

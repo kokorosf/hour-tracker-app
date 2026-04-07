@@ -1,5 +1,5 @@
 /**
- * HTTP client wrapper for the Hour Tracker /api/mcp endpoint.
+ * HTTP client wrapper for the Pure Track /api/mcp endpoint.
  *
  * Uses Node.js built-in fetch() — no external HTTP library needed.
  */
