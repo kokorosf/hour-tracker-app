@@ -103,9 +103,9 @@ jobs:
           docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/hour-tracker-web:${{ github.sha }}
           docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/hour-tracker-web:latest
 
-      - name: Deploy to VM
+      - name: Trigger Watchtower update
         run: |
-          gcloud compute ssh hour-tracker-app \
-            --zone us-central1-a \
-            --quiet \
-            --command "cd /opt/hour-tracker && sudo docker compose pull web && sudo docker compose up -d web"
+          curl -sf --max-time 30 \
+            -H "Authorization: Bearer ${{ secrets.WATCHTOWER_TOKEN }}" \
+            "https://puretrack.duckdns.org/v1/update" \
+            || echo "::warning::Watchtower HTTP trigger unavailable — will poll within 5 min"

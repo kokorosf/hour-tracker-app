@@ -71,6 +71,13 @@ variable "cron_secret" {
   default     = ""
 }
 
+variable "watchtower_token" {
+  description = "Bearer token for Watchtower HTTP API (used by CI to trigger immediate deploys)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
 variable "telegram_bot_token" {
   description = "Telegram Bot API token (empty = Telegram integration disabled)"
   type        = string
@@ -182,9 +189,14 @@ resource "google_compute_instance" "app" {
     mkdir -p /opt/hour-tracker
 
     # Write Caddyfile
-    cat > /opt/hour-tracker/Caddyfile <<'CADDY'
+    cat > /opt/hour-tracker/Caddyfile <<CADDY
     ${var.domain} {
-      reverse_proxy web:3000
+      handle /v1/update {
+        reverse_proxy watchtower:8080
+      }
+      handle {
+        reverse_proxy web:3000
+      }
     }
     CADDY
 
@@ -239,6 +251,8 @@ resource "google_compute_instance" "app" {
         restart: always
         environment:
           DOCKER_API_VERSION: "1.40"
+          WATCHTOWER_HTTP_API_UPDATE: "true"
+          WATCHTOWER_HTTP_API_TOKEN: "${var.watchtower_token}"
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
           - /root/.docker/config.json:/config.json:ro
