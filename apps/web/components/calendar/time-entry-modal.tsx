@@ -57,8 +57,11 @@ interface FormValues {
   date: string;
   startTime: string;
   endTime: string;
+  durationHours: string;
   description: string;
 }
+
+type TimeInputMode = 'endTime' | 'duration';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -94,6 +97,25 @@ function formatDuration(minutes: number): string {
   if (h === 0) return `${m}m`;
   if (m === 0) return `${h}h`;
   return `${h}h ${m}m`;
+}
+
+/** Add minutes to an HH:MM time string. Returns HH:MM or null if it exceeds 24:00. */
+function addMinutesToTime(time: string, minutes: number): string | null {
+  const [h = 0, m = 0] = time.split(':').map(Number);
+  const total = h * 60 + m + minutes;
+  if (total > 24 * 60 || total < 0) return null;
+  const endH = String(Math.floor(total / 60)).padStart(2, '0');
+  const endM = String(total % 60).padStart(2, '0');
+  return `${endH}:${endM}`;
+}
+
+/** Compute duration in hours between two HH:MM strings. */
+function timeDiffHours(start: string, end: string): number | null {
+  const [sh = 0, sm = 0] = start.split(':').map(Number);
+  const [eh = 0, em = 0] = end.split(':').map(Number);
+  const diff = (eh * 60 + em) - (sh * 60 + sm);
+  if (diff <= 0) return null;
+  return diff / 60;
 }
 
 // ---------------------------------------------------------------------------
@@ -181,6 +203,7 @@ export default function TimeEntryModal({
   const [submitting, setSubmitting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [inputMode, setInputMode] = useState<TimeInputMode>('endTime');
   const isEdit = entry !== null;
 
   // ---------------------------------------------------------------------------
@@ -208,6 +231,7 @@ export default function TimeEntryModal({
       date: '',
       startTime: '',
       endTime: '',
+      durationHours: '',
       description: '',
     },
   });
@@ -215,6 +239,7 @@ export default function TimeEntryModal({
   const selectedProjectId = watch('projectId');
   const watchedStartTime = watch('startTime');
   const watchedEndTime = watch('endTime');
+  const watchedDurationHours = watch('durationHours');
 
   // Fetch tasks filtered by the selected project.
   const taskSwrKey =
@@ -257,19 +282,61 @@ export default function TimeEntryModal({
   }, [watchedStartTime, watchedEndTime]);
 
   // ---------------------------------------------------------------------------
+  // Duration ↔ end-time sync
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => {
+    if (inputMode !== 'duration') return;
+    if (!watchedStartTime || !watchedDurationHours) return;
+    const hours = parseFloat(watchedDurationHours);
+    if (isNaN(hours) || hours <= 0) return;
+    const minutes = Math.round(hours * 60);
+    const computed = addMinutesToTime(watchedStartTime, minutes);
+    if (computed) setValue('endTime', computed, { shouldValidate: true });
+  }, [inputMode, watchedStartTime, watchedDurationHours, setValue]);
+
+  /** Computed end-time display for duration mode. */
+  const computedEndTimeDisplay = useMemo(() => {
+    if (!watchedStartTime || !watchedDurationHours) return '—';
+    const hours = parseFloat(watchedDurationHours);
+    if (isNaN(hours) || hours <= 0) return '—';
+    const minutes = Math.round(hours * 60);
+    const result = addMinutesToTime(watchedStartTime, minutes);
+    return result ?? 'Over 24h';
+  }, [watchedStartTime, watchedDurationHours]);
+
+  function handleToggleMode() {
+    if (inputMode === 'endTime') {
+      // Pre-fill duration from current start/end
+      if (watchedStartTime && watchedEndTime) {
+        const hours = timeDiffHours(watchedStartTime, watchedEndTime);
+        if (hours) setValue('durationHours', String(hours));
+      }
+      setInputMode('duration');
+    } else {
+      setInputMode('endTime');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Form reset when modal opens
   // ---------------------------------------------------------------------------
 
   useEffect(() => {
     if (!isOpen) return;
+    setInputMode('endTime');
 
     if (entry) {
+      const startStr = toTimeStr(entry.startTime);
+      const endStr = toTimeStr(entry.endTime);
+      const hours = timeDiffHours(startStr, endStr);
       reset({
         projectId: entry.projectId,
         taskId: entry.taskId,
         date: toDateStr(entry.startTime),
-        startTime: toTimeStr(entry.startTime),
-        endTime: toTimeStr(entry.endTime),
+        startTime: startStr,
+        endTime: endStr,
+        durationHours: hours ? String(hours) : '',
         description: entry.description ?? '',
       });
       prevProjectRef.current = entry.projectId;
@@ -281,6 +348,7 @@ export default function TimeEntryModal({
         date: toDateStr(now),
         startTime: '',
         endTime: '',
+        durationHours: '',
         description: '',
       });
       prevProjectRef.current = '';
@@ -502,38 +570,131 @@ export default function TimeEntryModal({
             />
           </div>
 
-          <div className="col-span-2">
-            <Controller
-              name="endTime"
-              control={control}
-              rules={{
-                required: 'End time is required.',
-                validate: (value) => {
-                  const start = getValues('startTime');
-                  if (!start || !value) return true;
-                  return value > start || 'End time must be after start time.';
-                },
-              }}
-              render={({ field, fieldState }) => (
-                <Input
-                  label="End time"
-                  type="time"
-                  required
-                  value={field.value}
-                  onChange={field.onChange}
-                  error={fieldState.error?.message}
-                  disabled={submitting}
+          {inputMode === 'endTime' ? (
+            <>
+              <div className="col-span-2">
+                <Controller
+                  name="endTime"
+                  control={control}
+                  rules={{
+                    required: 'End time is required.',
+                    validate: (value) => {
+                      const start = getValues('startTime');
+                      if (!start || !value) return true;
+                      return value > start || 'End time must be after start time.';
+                    },
+                  }}
+                  render={({ field, fieldState }) => (
+                    <div>
+                      <div className="flex items-baseline gap-1 mb-1">
+                        <span className="block text-sm font-medium text-gray-700">
+                          End time<span className="text-red-500 ml-0.5">*</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleToggleMode}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-normal"
+                        >
+                          Use duration
+                        </button>
+                      </div>
+                      <input
+                        type="time"
+                        value={field.value}
+                        onChange={field.onChange}
+                        disabled={submitting}
+                        aria-invalid={fieldState.error ? true : undefined}
+                        className={[
+                          'block w-full rounded-md border px-3 py-2 text-gray-900 shadow-sm',
+                          'focus:outline-none focus:ring-2 focus:ring-offset-0',
+                          fieldState.error
+                            ? 'border-red-500 focus:ring-red-500'
+                            : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500',
+                          submitting ? 'bg-gray-100 opacity-50 cursor-not-allowed' : 'bg-white',
+                        ].join(' ')}
+                      />
+                      {fieldState.error && (
+                        <p className="mt-1 text-sm text-red-600">{fieldState.error.message}</p>
+                      )}
+                    </div>
+                  )}
                 />
-              )}
-            />
-          </div>
+              </div>
 
-          <div className="col-span-1 flex flex-col">
-            <span className="block text-sm font-medium text-gray-700 mb-1">Duration</span>
-            <div className="flex flex-1 items-center rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-600">
-              {durationDisplay}
-            </div>
-          </div>
+              <div className="col-span-1 flex flex-col">
+                <span className="block text-sm font-medium text-gray-700 mb-1">Duration</span>
+                <div className="flex flex-1 items-center rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-600">
+                  {durationDisplay}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="col-span-2">
+                <Controller
+                  name="durationHours"
+                  control={control}
+                  rules={{
+                    required: 'Duration is required.',
+                    validate: (value) => {
+                      const hours = parseFloat(value);
+                      if (isNaN(hours) || hours <= 0) return 'Must be greater than 0.';
+                      const start = getValues('startTime');
+                      if (start) {
+                        const result = addMinutesToTime(start, Math.round(hours * 60));
+                        if (!result) return 'Duration exceeds end of day.';
+                      }
+                      return true;
+                    },
+                  }}
+                  render={({ field, fieldState }) => (
+                    <div>
+                      <div className="flex items-baseline gap-1 mb-1">
+                        <span className="block text-sm font-medium text-gray-700">
+                          Duration (hours)<span className="text-red-500 ml-0.5">*</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleToggleMode}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-normal"
+                        >
+                          Use end time
+                        </button>
+                      </div>
+                      <input
+                        type="number"
+                        step="0.25"
+                        min="0.01"
+                        value={field.value}
+                        onChange={field.onChange}
+                        disabled={submitting}
+                        placeholder="e.g. 1.5"
+                        aria-invalid={fieldState.error ? true : undefined}
+                        className={[
+                          'block w-full rounded-md border px-3 py-2 text-gray-900 shadow-sm',
+                          'focus:outline-none focus:ring-2 focus:ring-offset-0',
+                          fieldState.error
+                            ? 'border-red-500 focus:ring-red-500'
+                            : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500',
+                          submitting ? 'bg-gray-100 opacity-50 cursor-not-allowed' : 'bg-white',
+                        ].join(' ')}
+                      />
+                      {fieldState.error && (
+                        <p className="mt-1 text-sm text-red-600">{fieldState.error.message}</p>
+                      )}
+                    </div>
+                  )}
+                />
+              </div>
+
+              <div className="col-span-1 flex flex-col">
+                <span className="block text-sm font-medium text-gray-700 mb-1">End time</span>
+                <div className="flex flex-1 items-center rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-600">
+                  {computedEndTimeDisplay}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Description */}
