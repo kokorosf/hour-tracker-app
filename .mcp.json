@@ -4,7 +4,7 @@
       "command": "node",
       "args": ["C:\\Users\\Kokoro Horiuchi\\hour-tracker-app\\packages\\mcp-server\\dist\\index.js"],
       "env": {
-        "HOUR_TRACKER_API_URL": "https://hour-tracker-web-753533696796.us-central1.run.app",
+        "HOUR_TRACKER_API_URL": "https://puretrack.duckdns.org",
         "HOUR_TRACKER_API_TOKEN": "eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2Q0JDLUhTNTEyIiwia2lkIjoiVE0yWEJjaXpKUDRkMFhDdHdJTV9Jb2YzU1dhRXllQXcwbFVVV1JBUEUwc2VjbkdQOTFTYjZlVkRzS0w2VlUxbDhoUVdJYW5Vc2lCZTBYNmtRTC13cEEifQ..-170hWIwygaONuyDZ7FI-w.FsolKzLefa_jXVf5qh0KpGA3DI3Nf04jbNC80JtzBE_n3sz3-TcYGW7KnRQLGpTPnyJrbt0dbmboWvml0pXmPQSgmhOD2goXrn-f9Comcb6UiT6mGZB_8d9TAfBQvInN7ylC_O-grtwCm1Nib1FK60Yg8TYnYkyxzQ47yt3S6llZN4Y-XXDRxFY6vt8HVp0zGajX8gzujYoXgjwHcKr8F2WSSo1eZ0mWJ82aUMit0GEp_r1TX2MH9ezeKptWqou84avGMDyIMUtXULAtwM37nF6K7_iVZZ9GHjGpVs3vh88vapWUfb4aE-P0YohiSuI8.SGmP59jbyLeaJ84A4tbW1mTpd_WNpPquxmZgw6-0Djg"
       }
     }

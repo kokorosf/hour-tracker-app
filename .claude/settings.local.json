@@ -17,7 +17,8 @@
       "Bash(curl:*)",
       "Bash(HOUR_TRACKER_API_URL=\"https://hour-tracker-web-753533696796.us-central1.run.app\" HOUR_TRACKER_API_TOKEN=\"test\" node packages/mcp-server/dist/index.js)",
       "Bash(kill %1)",
-      "Bash(wait)"
+      "Bash(wait)",
+      "mcp__hour-tracker__get_user_status"
     ]
   }
 }
