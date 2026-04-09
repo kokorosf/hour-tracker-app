@@ -254,7 +254,7 @@ export default function SettingsPage() {
                       <p>To use Pure Track with Claude:</p>
                       <ol className="list-decimal list-inside space-y-1">
                         <li>Copy the token above</li>
-                        <li>Open Claude Settings &rarr; Integrations &rarr; Add MCP Server</li>
+                        <li>Open Claude Settings &rarr; Developer &rarr; Add MCP Server</li>
                         <li>Set the URL and paste your token as the Bearer header</li>
                       </ol>
                       <div className="mt-2 rounded bg-gray-100 p-2 overflow-x-auto">
