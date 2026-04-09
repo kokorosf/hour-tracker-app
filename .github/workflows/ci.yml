@@ -103,5 +103,9 @@ jobs:
           docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/hour-tracker-web:${{ github.sha }}
           docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/hour-tracker-web:latest
 
-      # Watchtower on the VM automatically detects the new :latest image
-      # and restarts the web container within 5 minutes of push.
+      - name: Deploy to VM
+        run: |
+          gcloud compute ssh hour-tracker-app \
+            --zone us-central1-a \
+            --quiet \
+            --command "cd /opt/hour-tracker && sudo docker compose pull web && sudo docker compose up -d web"
