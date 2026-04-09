@@ -237,6 +237,8 @@ resource "google_compute_instance" "app" {
         image: containrrr/watchtower
         container_name: hourtracker-watchtower
         restart: always
+        environment:
+          DOCKER_API_VERSION: "1.40"
         volumes:
           - /var/run/docker.sock:/var/run/docker.sock
           - /root/.docker/config.json:/config.json:ro
