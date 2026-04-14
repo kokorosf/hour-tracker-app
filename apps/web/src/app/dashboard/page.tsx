@@ -224,7 +224,7 @@ export default function DashboardPage() {
     <>
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <h1 className="text-2xl font-bold text-[#0e1828]">Dashboard</h1>
 
         {/* Date range selector */}
         <div className="flex flex-wrap items-center gap-2">
@@ -236,8 +236,8 @@ export default function DashboardPage() {
               className={[
                 'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
                 preset === p
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+                  ? 'bg-[#7bc8e0] text-[#111c30]'
+                  : 'bg-[#d8e0ec] text-[#0e1828] hover:bg-[#c4d0e0]',
               ].join(' ')}
             >
               {p === 'this_week' && 'This Week'}
@@ -252,8 +252,8 @@ export default function DashboardPage() {
             className={[
               'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
               preset === 'custom'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+                ? 'bg-[#7bc8e0] text-[#111c30]'
+                : 'bg-[#d8e0ec] text-[#0e1828] hover:bg-[#c4d0e0]',
             ].join(' ')}
           >
             Custom
@@ -263,10 +263,10 @@ export default function DashboardPage() {
 
       {/* Custom date inputs */}
       {preset === 'custom' && (
-        <div className="mb-6 flex flex-wrap items-center gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <div className="mb-6 flex flex-wrap items-center gap-4 rounded-lg border border-[#d8e0ec] bg-[#ffffff] p-4">
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-gray-500" />
-            <label htmlFor="start-date" className="text-sm font-medium text-gray-700">
+            <Calendar className="h-4 w-4 text-[#5a7090]" />
+            <label htmlFor="start-date" className="text-sm font-medium text-[#0e1828]">
               Start
             </label>
             <input
@@ -274,11 +274,11 @@ export default function DashboardPage() {
               type="date"
               value={formatDateForInput(customStart)}
               onChange={handleCustomStartChange}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="rounded-md border border-[#d8e0ec] px-3 py-1.5 text-sm focus:border-[#7bc8e0] focus:outline-none focus:ring-1 focus:ring-[#7bc8e0]"
             />
           </div>
           <div className="flex items-center gap-2">
-            <label htmlFor="end-date" className="text-sm font-medium text-gray-700">
+            <label htmlFor="end-date" className="text-sm font-medium text-[#0e1828]">
               End
             </label>
             <input
@@ -286,7 +286,7 @@ export default function DashboardPage() {
               type="date"
               value={formatDateForInput(customEnd)}
               onChange={handleCustomEndChange}
-              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="rounded-md border border-[#d8e0ec] px-3 py-1.5 text-sm focus:border-[#7bc8e0] focus:outline-none focus:ring-1 focus:ring-[#7bc8e0]"
             />
           </div>
         </div>
@@ -298,15 +298,15 @@ export default function DashboardPage() {
           {/* Cards skeleton */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-28 animate-pulse rounded-lg bg-gray-200" />
+              <div key={i} className="h-28 animate-pulse rounded-lg bg-[#d8e0ec]" />
             ))}
           </div>
           {/* Charts skeleton */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div className="h-80 animate-pulse rounded-lg bg-gray-200" />
-            <div className="h-80 animate-pulse rounded-lg bg-gray-200" />
+            <div className="h-80 animate-pulse rounded-lg bg-[#d8e0ec]" />
+            <div className="h-80 animate-pulse rounded-lg bg-[#d8e0ec]" />
           </div>
-          <div className="h-80 animate-pulse rounded-lg bg-gray-200" />
+          <div className="h-80 animate-pulse rounded-lg bg-[#d8e0ec]" />
         </div>
       )}
 
@@ -316,14 +316,14 @@ export default function DashboardPage() {
           {/* Summary cards */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {/* Total hours */}
-            <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="rounded-lg border border-[#d8e0ec] bg-[#ffffff] p-5 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-blue-100 p-2.5">
                   <Clock className="h-5 w-5 text-blue-600" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-gray-500">Total Hours</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-[#5a7090]">Total Hours</p>
+                  <p className="text-2xl font-bold text-[#0e1828]">
                     {formatHours(data.totalHours)}
                   </p>
                 </div>
@@ -331,14 +331,14 @@ export default function DashboardPage() {
             </div>
 
             {/* Billable hours */}
-            <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="rounded-lg border border-[#d8e0ec] bg-[#ffffff] p-5 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-green-100 p-2.5">
                   <DollarSign className="h-5 w-5 text-green-600" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-gray-500">Billable Hours</p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-[#5a7090]">Billable Hours</p>
+                  <p className="text-2xl font-bold text-[#0e1828]">
                     {formatHours(data.billableHours)}
                   </p>
                 </div>
@@ -346,27 +346,27 @@ export default function DashboardPage() {
             </div>
 
             {/* Active projects */}
-            <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="rounded-lg border border-[#d8e0ec] bg-[#ffffff] p-5 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-violet-100 p-2.5">
                   <FolderOpen className="h-5 w-5 text-violet-600" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-gray-500">Active Projects</p>
-                  <p className="text-2xl font-bold text-gray-900">{data.activeProjects}</p>
+                  <p className="text-sm font-medium text-[#5a7090]">Active Projects</p>
+                  <p className="text-2xl font-bold text-[#0e1828]">{data.activeProjects}</p>
                 </div>
               </div>
             </div>
 
             {/* Pending entries */}
-            <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="rounded-lg border border-[#d8e0ec] bg-[#ffffff] p-5 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="rounded-full bg-amber-100 p-2.5">
                   <FileQuestion className="h-5 w-5 text-amber-600" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-gray-500">Pending Entries</p>
-                  <p className="text-2xl font-bold text-gray-900">{data.pendingEntries}</p>
+                  <p className="text-sm font-medium text-[#5a7090]">Pending Entries</p>
+                  <p className="text-2xl font-bold text-[#0e1828]">{data.pendingEntries}</p>
                 </div>
               </div>
             </div>
@@ -375,8 +375,8 @@ export default function DashboardPage() {
           {/* Charts row */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Pie chart: Billable vs Non-billable */}
-            <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-4 text-lg font-semibold text-gray-900">
+            <div className="rounded-lg border border-[#d8e0ec] bg-[#ffffff] p-5 shadow-sm">
+              <h2 className="mb-4 text-lg font-semibold text-[#0e1828]">
                 Billable vs Non-billable
               </h2>
               {pieData.length > 0 ? (
@@ -401,7 +401,7 @@ export default function DashboardPage() {
                       formatter={(value) => formatHours((Number(value) || 0) / 60)}
                       contentStyle={{
                         backgroundColor: 'white',
-                        border: '1px solid #e5e7eb',
+                        border: '1px solid #d8e0ec',
                         borderRadius: '0.5rem',
                       }}
                     />
@@ -409,15 +409,15 @@ export default function DashboardPage() {
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex h-[280px] items-center justify-center text-gray-500">
+                <div className="flex h-[280px] items-center justify-center text-[#5a7090]">
                   No data for this period
                 </div>
               )}
             </div>
 
             {/* Bar chart: Top 10 projects */}
-            <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-4 text-lg font-semibold text-gray-900">Top Projects by Hours</h2>
+            <div className="rounded-lg border border-[#d8e0ec] bg-[#ffffff] p-5 shadow-sm">
+              <h2 className="mb-4 text-lg font-semibold text-[#0e1828]">Top Projects by Hours</h2>
               {barData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={barData} layout="vertical" margin={{ left: 20, right: 20 }}>
@@ -431,7 +431,7 @@ export default function DashboardPage() {
                       ]}
                       contentStyle={{
                         backgroundColor: 'white',
-                        border: '1px solid #e5e7eb',
+                        border: '1px solid #d8e0ec',
                         borderRadius: '0.5rem',
                       }}
                     />
@@ -439,7 +439,7 @@ export default function DashboardPage() {
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="flex h-[280px] items-center justify-center text-gray-500">
+                <div className="flex h-[280px] items-center justify-center text-[#5a7090]">
                   No data for this period
                 </div>
               )}
@@ -448,8 +448,8 @@ export default function DashboardPage() {
 
           {/* Bar chart: Hours by Client */}
           {clientBarData.length > 0 && (
-            <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-4 text-lg font-semibold text-gray-900">Hours by Client</h2>
+            <div className="rounded-lg border border-[#d8e0ec] bg-[#ffffff] p-5 shadow-sm">
+              <h2 className="mb-4 text-lg font-semibold text-[#0e1828]">Hours by Client</h2>
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={clientBarData} layout="vertical" margin={{ left: 20, right: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal vertical={false} />
@@ -462,7 +462,7 @@ export default function DashboardPage() {
                     ]}
                     contentStyle={{
                       backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
+                      border: '1px solid #d8e0ec',
                       borderRadius: '0.5rem',
                     }}
                   />
@@ -473,8 +473,8 @@ export default function DashboardPage() {
           )}
 
           {/* Line chart: Hours per day */}
-          <div className="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-gray-900">Hours per Day</h2>
+          <div className="rounded-lg border border-[#d8e0ec] bg-[#ffffff] p-5 shadow-sm">
+            <h2 className="mb-4 text-lg font-semibold text-[#0e1828]">Hours per Day</h2>
             {lineData.length > 0 ? (
               <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={lineData} margin={{ left: 0, right: 20, top: 10, bottom: 10 }}>
@@ -485,7 +485,7 @@ export default function DashboardPage() {
                     formatter={(value) => [`${value}h`, 'Hours']}
                     contentStyle={{
                       backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
+                      border: '1px solid #d8e0ec',
                       borderRadius: '0.5rem',
                     }}
                   />
@@ -502,7 +502,7 @@ export default function DashboardPage() {
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex h-[320px] items-center justify-center text-gray-500">
+              <div className="flex h-[320px] items-center justify-center text-[#5a7090]">
                 No data for this period
               </div>
             )}
