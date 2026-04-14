@@ -16,12 +16,19 @@ export default function Topbar({ email, tenantName, onMenuToggle, onStartTimer }
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-gray-200 bg-white px-4 lg:px-6">
+    <header
+      className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b px-4 lg:px-6"
+      style={{
+        backgroundColor: 'var(--color-card)',
+        borderColor: 'var(--color-border-light)',
+      }}
+    >
       {/* Hamburger — mobile only */}
       <button
         type="button"
         onClick={onMenuToggle}
-        className="rounded-md p-1.5 text-gray-500 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 lg:hidden"
+        className="rounded-none p-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7bc8e0] lg:hidden"
+        style={{ color: 'var(--color-muted)' }}
         aria-label="Open sidebar"
       >
         <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
@@ -29,10 +36,14 @@ export default function Topbar({ email, tenantName, onMenuToggle, onStartTimer }
         </svg>
       </button>
 
-      {/* App name — mobile only (desktop has it in sidebar) */}
-      <span className="text-lg font-bold text-gray-900 lg:hidden">Pure Track</span>
+      {/* App name — mobile only */}
+      <span
+        className="text-lg font-extrabold uppercase tracking-widest lg:hidden"
+        style={{ fontFamily: 'var(--font-barlow-condensed), sans-serif', color: 'var(--color-navy)' }}
+      >
+        Pure Track
+      </span>
 
-      {/* Spacer */}
       <div className="flex-1" />
 
       {/* Start Timer */}
@@ -40,25 +51,40 @@ export default function Topbar({ email, tenantName, onMenuToggle, onStartTimer }
         <button
           type="button"
           onClick={onStartTimer}
-          className="flex items-center gap-1.5 rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7bc8e0]"
+          style={{
+            fontFamily: 'var(--font-barlow-condensed), sans-serif',
+            backgroundColor: 'var(--color-accent)',
+            color: 'var(--color-navy)',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-accent-dark)')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-accent)')}
         >
-          <Play className="h-4 w-4" aria-hidden="true" />
+          <Play className="h-3.5 w-3.5" aria-hidden="true" />
           <span className="hidden sm:inline">Start Timer</span>
         </button>
       )}
 
       {/* Tenant name */}
       {tenantName && (
-        <span className="hidden text-sm text-gray-500 sm:block">{tenantName}</span>
+        <span
+          className="hidden text-xs font-semibold uppercase tracking-widest sm:block"
+          style={{ fontFamily: 'var(--font-barlow-condensed), sans-serif', color: 'var(--color-muted)' }}
+        >
+          {tenantName}
+        </span>
       )}
 
       {/* Divider */}
       {tenantName && (
-        <div className="hidden h-6 w-px bg-gray-200 sm:block" aria-hidden="true" />
+        <div className="hidden h-5 w-px sm:block" style={{ backgroundColor: 'var(--color-border-light)' }} aria-hidden="true" />
       )}
 
       {/* User email */}
-      <span className="truncate text-sm font-medium text-gray-700 max-w-[200px]">
+      <span
+        className="truncate text-sm font-medium max-w-[200px]"
+        style={{ color: 'var(--color-text)' }}
+      >
         {email}
       </span>
 
@@ -66,7 +92,19 @@ export default function Topbar({ email, tenantName, onMenuToggle, onStartTimer }
       <button
         type="button"
         onClick={handleLogout}
-        className="rounded-md px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        className="px-3 py-1.5 text-xs font-bold uppercase tracking-widest transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#7bc8e0]"
+        style={{
+          fontFamily: 'var(--font-barlow-condensed), sans-serif',
+          color: 'var(--color-muted)',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.backgroundColor = 'var(--color-border-light)';
+          e.currentTarget.style.color = 'var(--color-text)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.backgroundColor = 'transparent';
+          e.currentTarget.style.color = 'var(--color-muted)';
+        }}
       >
         Log out
       </button>

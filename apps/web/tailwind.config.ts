@@ -7,7 +7,11 @@ const config: Config = {
     "../../packages/ui/src/**/*.{ts,tsx}"
   ],
   theme: {
-    extend: {}
+    extend: {
+      fontFamily: {
+        barlow: ["'Barlow Condensed'", 'sans-serif'],
+      },
+    }
   },
   plugins: []
 };

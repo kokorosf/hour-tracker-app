@@ -22,6 +22,19 @@ export { ChatIdentityRepository } from './repositories/chat-identity.repository'
 export type { ChatIdentityMapping } from './repositories/chat-identity.repository';
 export { ProcessedMessageRepository } from './repositories/processed-message.repository';
 
+export {
+  OAuthClientRepository,
+  OAuthCodeRepository,
+  OAuthTokenRepository,
+  OAuthRefreshTokenRepository,
+} from './repositories/oauth.repository';
+export type {
+  OAuthClient,
+  OAuthCode,
+  OAuthToken,
+  OAuthRefreshToken,
+} from './repositories/oauth.repository';
+
 export { writeAuditLog } from './audit';
 export type { AuditEntry } from './audit';
 

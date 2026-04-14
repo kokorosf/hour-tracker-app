@@ -7,6 +7,18 @@ const nextConfig = {
       bodySizeLimit: "2mb"
     }
   },
+  async rewrites() {
+    return [
+      {
+        source: "/.well-known/oauth-protected-resource/:path*",
+        destination: "/api/oauth-discovery/protected-resource/:path*",
+      },
+      {
+        source: "/.well-known/oauth-authorization-server",
+        destination: "/api/oauth-discovery/authorization-server",
+      },
+    ];
+  },
   async headers() {
     return [
       {
@@ -43,7 +55,7 @@ const nextConfig = {
               "connect-src 'self'",
               "frame-ancestors 'none'",
               "base-uri 'self'",
-              "form-action 'self'",
+              "form-action 'self' https:",
             ].join("; "),
           },
         ],

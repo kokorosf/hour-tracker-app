@@ -40,7 +40,7 @@ export default function DashboardShell({
   const timerVisible = timerSetupOpen || hasRunningTimer;
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg)' }}>
       <Sidebar
         userRole={role}
         isOpen={sidebarOpen}

@@ -4,13 +4,13 @@ import { type ButtonHTMLAttributes, type ReactNode } from 'react';
 
 const variantStyles = {
   primary:
-    'bg-blue-600 hover:bg-blue-700 text-white focus-visible:ring-blue-500',
+    'bg-[#7bc8e0] hover:bg-[#58b0cc] text-[#0e1828] focus-visible:ring-[#7bc8e0]',
   secondary:
-    'bg-gray-200 hover:bg-gray-300 text-gray-900 focus-visible:ring-gray-400',
+    'bg-[#d8e0ec] hover:bg-[#c4d0e0] text-[#0e1828] focus-visible:ring-[#7bc8e0]',
   danger:
     'bg-red-600 hover:bg-red-700 text-white focus-visible:ring-red-500',
   ghost:
-    'bg-transparent hover:bg-gray-100 text-gray-700 focus-visible:ring-gray-400',
+    'bg-transparent hover:bg-[#d8e0ec] text-[#5a7090] focus-visible:ring-[#7bc8e0]',
 } as const;
 
 const sizeStyles = {
@@ -74,7 +74,8 @@ export default function Button({
       type={type}
       disabled={isDisabled}
       className={[
-        'inline-flex items-center justify-center font-medium rounded-md',
+        'inline-flex items-center justify-center font-bold tracking-wide uppercase rounded-none',
+        'font-barlow',
         'transition-colors duration-150',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
         variantStyles[variant],

@@ -5,14 +5,20 @@
  * from the Claude mobile app or any MCP-compatible client.
  *
  * URL: https://puretrack.duckdns.org/api/mcp-remote
- * Auth: Bearer <JWT token> in Authorization header
+ * Auth: Bearer token — supports both OAuth access tokens and legacy JWT tokens
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
+import { encode } from 'next-auth/jwt';
+import { OAuthTokenRepository, UserRepository } from '@hour-tracker/database';
+import { authConfig } from '@/lib/auth/config';
 import { createApiClient } from '@/lib/mcp/api-client';
 import { registerTools } from '@/lib/mcp/tools';
+
+const oauthTokenRepo = new OAuthTokenRepository();
+const userRepo = new UserRepository();
 
 // ---------------------------------------------------------------------------
 // Session management
@@ -75,6 +81,38 @@ function corsHeaders(): Record<string, string> {
   };
 }
 
+/**
+ * Resolve a Bearer token to a JWT suitable for the /api/mcp endpoint.
+ * First tries OAuth token lookup; falls back to treating it as a legacy JWT.
+ */
+async function resolveToJwt(bearerToken: string): Promise<string> {
+  // Try OAuth token lookup
+  const oauthToken = await oauthTokenRepo.getToken(bearerToken);
+  if (oauthToken) {
+    // Look up user to get email and role for the JWT
+    const user = await userRepo.findByIdGlobal(oauthToken.userId);
+    if (!user) throw new Error('User not found for OAuth token');
+
+    const secret = authConfig.secret ?? process.env.AUTH_SECRET;
+    if (!secret) throw new Error('AUTH_SECRET is not configured');
+
+    const jwt = await encode({
+      secret,
+      salt: 'authjs.session-token',
+      token: {
+        userId: user.id,
+        email: user.email,
+        tenantId: user.tenantId,
+        role: user.role,
+      },
+    });
+    return jwt;
+  }
+
+  // Fall back to legacy JWT (pass through as-is)
+  return bearerToken;
+}
+
 function createMcpServerWithTools(token: string, baseUrl: string): McpServer {
   const client = createApiClient(baseUrl, token);
   const server = new McpServer({
@@ -133,6 +171,9 @@ export async function POST(req: Request) {
     );
   }
 
+  // Resolve OAuth/JWT token
+  const jwt = await resolveToJwt(token);
+
   // Create new transport + server
   const baseUrl = getBaseUrl(req);
   const transport = new WebStandardStreamableHTTPServerTransport({
@@ -150,7 +191,7 @@ export async function POST(req: Request) {
     },
   });
 
-  const server = createMcpServerWithTools(token, baseUrl);
+  const server = createMcpServerWithTools(jwt, baseUrl);
   await server.connect(transport);
 
   const response = await transport.handleRequest(req, { parsedBody: body });

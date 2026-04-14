@@ -47,6 +47,17 @@ export class UserRepository extends BaseRepository<User> {
   }
 
   /**
+   * Find a user by ID without requiring a tenant ID.
+   * Used when resolving OAuth tokens where only the user ID is known.
+   */
+  async findByIdGlobal(id: string): Promise<User | null> {
+    const sql = `SELECT ${COLUMNS.join(', ')} FROM users WHERE id = $1`;
+    const { rows } = await getPool().query(sql, [id]);
+    if (rows.length === 0) return null;
+    return rowToCamel<User>(rows[0] as Record<string, unknown>);
+  }
+
+  /**
    * Find a user by email across **all** tenants.
    *
    * Used during login when the tenant is not yet known.  Returns the
