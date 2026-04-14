@@ -23,7 +23,8 @@
       "Bash(docker exec:*)",
       "Bash(bash deploy.sh --migrate-only)",
       "Bash(gcloud config:*)",
-      "Bash(gcloud compute:*)"
+      "Bash(gcloud compute:*)",
+      "Bash(npx jest:*)"
     ]
   }
 }

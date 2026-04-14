@@ -35,13 +35,13 @@ describe('Button', () => {
   it('applies primary variant styles by default', () => {
     render(<Button>Primary</Button>);
     const btn = screen.getByRole('button');
-    expect(btn.className).toContain('bg-blue-600');
+    expect(btn.className).toContain('bg-[#7bc8e0]');
   });
 
   it('applies secondary variant styles', () => {
     render(<Button variant="secondary">Secondary</Button>);
     const btn = screen.getByRole('button');
-    expect(btn.className).toContain('bg-gray-200');
+    expect(btn.className).toContain('bg-[#d8e0ec]');
   });
 
   it('applies danger variant styles', () => {

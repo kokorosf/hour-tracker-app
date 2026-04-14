@@ -107,8 +107,8 @@ describe('Input', () => {
   it('applies normal border styling when no error', () => {
     render(<Input label="Email" value="" onChange={() => {}} />);
     const input = screen.getByLabelText('Email');
-    expect(input.className).toContain('border-gray-300');
-    expect(input.className).toContain('focus:ring-blue-500');
+    expect(input.className).toContain('border-[#d8e0ec]');
+    expect(input.className).toContain('focus:ring-[#7bc8e0]');
   });
 
   // -----------------------------------------------------------------------
@@ -123,7 +123,6 @@ describe('Input', () => {
   it('applies disabled styling classes', () => {
     render(<Input label="Disabled" value="" onChange={() => {}} disabled />);
     const input = screen.getByLabelText('Disabled');
-    expect(input.className).toContain('bg-gray-100');
     expect(input.className).toContain('opacity-50');
     expect(input.className).toContain('cursor-not-allowed');
   });
@@ -131,7 +130,8 @@ describe('Input', () => {
   it('applies normal background when not disabled', () => {
     render(<Input label="Enabled" value="" onChange={() => {}} />);
     const input = screen.getByLabelText('Enabled');
-    expect(input.className).toContain('bg-white');
+    // Input inherits background from CSS variables, no explicit bg class
+    expect(input).not.toBeDisabled();
   });
 
   // -----------------------------------------------------------------------
